@@ -2598,9 +2598,9 @@ namespace dd_biot
 
 
 
-//              pcout << "\r  ..." << cg_iteration
-//                    << " iterations completed, (residual = " << combined_error_iter
-//                    << ")..." << std::flush;
+              pcout << "\r  ..." << cg_iteration
+                    << " iterations completed, (residual = " << combined_error_iter
+                    << ")..." << std::flush;
               // Exit criterion
               if (combined_error_iter/e_all_iter[0] < tolerance)
                 {
