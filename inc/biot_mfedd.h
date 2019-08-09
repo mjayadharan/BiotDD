@@ -1,8 +1,8 @@
 /* ---------------------------------------------------------------------
- * Declaration of MixedBiotProblemDD class template
+ * Declaration of MixedBiotProblemDD class template: see source files for more details
  * ---------------------------------------------------------------------
  *
- * Author: Eldar Khattatov, University of Pittsburgh, 2018
+ * Author: Manu Jayadharan, Eldar Khattatov, University of Pittsburgh, 2018-2019
  */
 
 #ifndef ELASTICITY_MFEDD_ELASTICITY_MFEDD_H

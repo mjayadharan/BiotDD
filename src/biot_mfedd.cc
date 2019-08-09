@@ -1,6 +1,7 @@
 /* ---------------------------------------------------------------------*/
 /* ---------------------------------------------------------------------
  This is part of a program that  implements DD for 3 Different Schemes for Biot: Monolithic, Dranined SPlit and Fixed Stress. This file is specific to Example 1 in paper on DD for BIot schemes.
+ *update: The code is modified to include nonmatching subdomain grid using mortar spaces and multiscale basis.
  * ---------------------------------------------------------------------
  *
  * Authors: Manu Jayadharan, Eldar Khattatov, University of Pittsburgh:2018- 2019
