@@ -2997,7 +2997,7 @@ namespace dd_biot
         ConstraintMatrix constraints;
         constraints.clear();
         constraints.close();
-//        project_mortar(P_fine2coarse, dof_handler, solution_star, project_quad, constraints, neighbors, dof_handler_mortar, solution_star_mortar);
+        project_mortar(P_fine2coarse, dof_handler, solution_star, project_quad, constraints, neighbors, dof_handler_mortar, solution_star_mortar);
 
         double res = 0;
 
@@ -3265,16 +3265,16 @@ namespace dd_biot
       err.velocity_stress_l2_div_errors[1] += s_hd_error;
       err.velocity_stress_l2_div_norms[1] += s_hd_norm;     // put += back!
 
-//      double l_int_error=1, l_int_norm=1;
-//        if (mortar_flag)
-//        {
-//            DisplacementBoundaryValues<dim> displ_solution;
-//            l_int_error = compute_interface_error(displ_solution);
-//
-//            interface_fe_function = 0;
-//            interface_fe_function_mortar = 0;
-//            l_int_norm = compute_interface_error(displ_solution);
-//        }
+      double l_int_error_elast=1, l_int_norm_elast=1;
+        if (mortar_flag)
+        {
+            DisplacementBoundaryValues<dim> displ_solution;
+            l_int_error_elast = compute_interface_error(displ_solution);
+
+            interface_fe_function = 0;
+            interface_fe_function_mortar = 0;
+            l_int_norm_elast = compute_interface_error(displ_solution);
+        }
 //
 //
 //        if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
@@ -3299,7 +3299,7 @@ namespace dd_biot
         const unsigned int n_active_cells=triangulation.n_active_cells();
         const unsigned int n_dofs=dof_handler.n_dofs();
 
-        double send_buf_num[11] = {err.l2_l2_errors[0],
+        double send_buf_num[12] = {err.l2_l2_errors[0],
                                    err.velocity_stress_l2_div_errors[0],
                                    err.l2_l2_errors[1],
                                    err.pressure_disp_l2_midcell_errors[0],
@@ -3309,9 +3309,10 @@ namespace dd_biot
                                    err.linf_l2_errors[2],
                                    err.l2_l2_errors[3],
                                    err.pressure_disp_l2_midcell_errors[1],
-                                   err.l2_l2_errors[4]};
+                                   err.l2_l2_errors[4],
+								   l_int_error_elast};
 
-        double send_buf_den[11] = {err.l2_l2_norms[0],
+        double send_buf_den[12] = {err.l2_l2_norms[0],
                                    err.velocity_stress_l2_div_norms[0],
                                    err.l2_l2_norms[1],
                                    err.pressure_disp_l2_midcell_norms[0],
@@ -3321,20 +3322,22 @@ namespace dd_biot
                                    0,
                                    err.l2_l2_norms[3],
                                    err.pressure_disp_l2_midcell_norms[1],
-                                   err.l2_l2_norms[4]};
+                                   err.l2_l2_norms[4],
+								   l_int_norm_elast};
 
-        double recv_buf_num[11] = {0,0,0,0,0,0,0,0,0,0,0};
-        double recv_buf_den[11] = {0,0,0,0,0,0,0,0,0,0,0};
+        double recv_buf_num[12] = {0,0,0,0,0,0,0,0,0,0,0};
+        double recv_buf_den[12] = {0,0,0,0,0,0,0,0,0,0,0};
 
-        MPI_Reduce(&send_buf_num[0], &recv_buf_num[0], 11, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
-        MPI_Reduce(&send_buf_den[0], &recv_buf_den[0], 11, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
+        MPI_Reduce(&send_buf_num[0], &recv_buf_num[0], 12, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
+        MPI_Reduce(&send_buf_den[0], &recv_buf_den[0], 12, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
 
         for (unsigned int i=0; i<11; ++i)
           if (i != 4 && i != 7 && i != 0 && i != 8)
             recv_buf_num[i] = sqrt(recv_buf_num[i])/sqrt(recv_buf_den[i]);
 //          else
 //            recv_buf_num[i] = recv_buf_num[i];
-
+ //    Calculating the relative error in mortar displacement.
+        recv_buf_num[11] = sqrt(recv_buf_num[11])/sqrt(recv_buf_den[11]);
 
         convergence_table.add_value("cycle", cycle);
         if(split_flag==0)
@@ -3359,6 +3362,8 @@ namespace dd_biot
 //        convergence_table.add_value("Displ,L2-L2mid", recv_buf_num[9]);
 
 //        convergence_table.add_value("Rotat,L2-L2", recv_buf_num[10]);
+        if (mortar_flag)
+          convergence_table.add_value("Lambda,Elast", recv_buf_num[11]);
       }
     }
 
@@ -3537,13 +3542,13 @@ namespace dd_biot
 //        convergence_table.evaluate_convergence_rates("Displ,L2-L2mid", ConvergenceTable::reduction_rate_log2);
 //        convergence_table.evaluate_convergence_rates("Rotat,L2-L2", ConvergenceTable::reduction_rate_log2);
 
-//        if (mortar_flag)
-//        {
-//          convergence_table.set_precision("Lambda,Int", 3);
-//          convergence_table.set_scientific("Lambda,Int", true);
-//          convergence_table.set_tex_caption("Lambda,Int", "$ \\|p - \\lambda_H\\|_{d_H} $");
-//          convergence_table.evaluate_convergence_rates("Lambda,Int", ConvergenceTable::reduction_rate_log2);
-//        }
+        if (mortar_flag)
+        {
+          convergence_table.set_precision("Lambda,Elast", 3);
+          convergence_table.set_scientific("Lambda,Elast", true);
+          convergence_table.set_tex_caption("Lambda,Elast", "$ \\|u - \\lambda_H\\|_{d_H} $");
+          convergence_table.evaluate_convergence_rates("Lambda,Elast", ConvergenceTable::reduction_rate_log2);
+        }
 
         std::ofstream error_table_file("error" + std::to_string(Utilities::MPI::n_mpi_processes(mpi_communicator)) + "domains.tex");
 
@@ -3628,7 +3633,10 @@ namespace dd_biot
                 }
 
                 if (mortar_flag)
+                {
                     GridGenerator::subdivided_hyper_rectangle(triangulation_mortar, reps[n_processes], p1, p2);
+                    pcout << "Mortar mesh has " << triangulation_mortar.n_active_cells() << " cells" << std::endl;
+                }
 
 
             }
