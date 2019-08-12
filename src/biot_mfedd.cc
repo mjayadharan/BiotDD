@@ -555,14 +555,13 @@ namespace dd_biot
                     compliance_tensor_pressure(phi_p[i], mu, lambda, apId);
                     make_asymmetry_tensor(phi_s[i], asym_i);
 
-                    //std::cout << "SOME PARAMS: " << prm.alpha << " " << prm.c_0 << " " << prm.time_step << " " << std::endl;
+
 
                     for (unsigned int j=0; j<dofs_per_cell; ++j)
                     {
                         make_tensor(phi_s[j], sigma);
                         make_asymmetry_tensor(phi_s[j], asym_j);
 
-                        //std::cout << "Rotation: " << phi_r[i] << ", asym: " << asym_j << "\n";
                         local_matrix(i, j) += (phi_u[i] * k_inverse_values[q] * phi_u[j] - phi_p[j] * div_phi_u[i]                                     // Darcy law
                                                + prm.time_step*div_phi_u[j] * phi_p[i] + prm.c_0*phi_p[i]*phi_p[j] + prm.alpha*trace(asigma)*phi_p[j]  // Momentum
                                                + prm.alpha * prm.alpha * trace(apId)*phi_p[j]
@@ -624,9 +623,6 @@ namespace dd_biot
            std::vector<FEValuesExtractors::Scalar> rotations(rotation_dim, FEValuesExtractors::Scalar());
            // Displacement DoFs
            const FEValuesExtractors::Vector displacement (dim*dim);
-//           // Velocity and Pressure DoFs
-//           const FEValuesExtractors::Vector velocity (dim*dim + dim + 0.5*dim*(dim-1));
-//           const FEValuesExtractors::Scalar pressure (dim*dim + dim + 0.5*dim*(dim-1) + dim);
 
            for (unsigned int i=0; i<dim; ++i)
            {
@@ -654,12 +650,6 @@ namespace dd_biot
 
 
                lame_function.vector_value_list (fe_values.get_quadrature_points(), lame_parameters_values);
-//               k_inverse.value_list (fe_values.get_quadrature_points(), k_inverse_values);
-
-//               // Velocity and pressure
-//               std::vector<Tensor<1,dim>>                phi_u(dofs_per_cell);
-//               std::vector <double>                      div_phi_u(dofs_per_cell);
-//               std::vector <double>                      phi_p(dofs_per_cell);
 
                // Stress, displacement and rotation
                std::vector<std::vector<Tensor<1,dim>>> phi_s(dofs_per_cell, std::vector<Tensor<1,dim> > (dim));
@@ -676,15 +666,6 @@ namespace dd_biot
                    for (unsigned int k=0; k<dofs_per_cell; ++k)
                 	   if(local_dof_indices[k]<n_Elast)
                 	   {
-	//                     // Evaluate test functions
-	//                     phi_u[k] = fe_values[velocity].value (k, q);
-	//                     phi_p[k] = fe_values[pressure].value (k, q);
-	//
-	//   //                  for (auto el : phi_p)
-	//   //                    std::cout << "Pressure: " << el << " ";
-	//   //                  std::cout << std::endl;
-	//
-	//                     div_phi_u[k] = fe_values[velocity].divergence (k, q);
 
 						 for (unsigned int s_i=0; s_i<dim; ++s_i)
 						 {
@@ -704,10 +685,7 @@ namespace dd_biot
 						   const double lambda = lame_parameters_values[q][0];
 
 						   compliance_tensor(phi_s[i], mu, lambda, asigma);
-	//                       compliance_tensor_pressure(phi_p[i], mu, lambda, apId);
 						   make_asymmetry_tensor(phi_s[i], asym_i);
-
-						   //std::cout << "SOME PARAMS: " << prm.alpha << " " << prm.c_0 << " " << prm.time_step << " " << std::endl;
 
 						   for (unsigned int j=0; j<dofs_per_cell; ++j)
 							   if(local_dof_indices[j]<n_Elast) //making sure we are looping only over elasticity DOFs
@@ -771,28 +749,10 @@ namespace dd_biot
 
             // Rotation variable is either a scalar(2d) or a vector(3d)
             const unsigned int rotation_dim = 0.5*dim*(dim-1);
-//            // Stress DoFs vectors
-//            std::vector<FEValuesExtractors::Vector> stresses(dim, FEValuesExtractors::Vector());
-//            std::vector<FEValuesExtractors::Scalar> rotations(rotation_dim, FEValuesExtractors::Scalar());
-//            // Displacement DoFs
-//            const FEValuesExtractors::Vector displacement (dim*dim);
             // Velocity and Pressure DoFs
             const FEValuesExtractors::Vector velocity (dim*dim + dim + 0.5*dim*(dim-1));
             const FEValuesExtractors::Scalar pressure (dim*dim + dim + 0.5*dim*(dim-1) + dim);
 
-//            for (unsigned int i=0; i<dim; ++i)
-//            {
-//                const FEValuesExtractors::Vector tmp_stress(i*dim);
-//                stresses[i].first_vector_component = tmp_stress.first_vector_component;
-//                if (dim == 2 && i == 0)
-//                {
-//                    const FEValuesExtractors::Scalar tmp_rotation(dim*dim + dim);
-//                    rotations[i].component = tmp_rotation.component;
-//                } else if (dim == 3) {
-//                    const FEValuesExtractors::Scalar tmp_rotation(dim*dim + dim + i);
-//                    rotations[i].component = tmp_rotation.component;
-//                }
-//            }
 
             typename DoFHandler<dim>::active_cell_iterator
                     cell = dof_handler.begin_active(),
@@ -811,11 +771,6 @@ namespace dd_biot
                 std::vector <double>                      div_phi_u(dofs_per_cell);
                 std::vector <double>                      phi_p(dofs_per_cell);
 
-//                // Stress, displacement and rotation
-//                std::vector<std::vector<Tensor<1,dim>>> phi_s(dofs_per_cell, std::vector<Tensor<1,dim> > (dim));
-//                std::vector<Tensor<1,dim>> div_phi_s(dofs_per_cell);
-//                std::vector<Tensor<1,dim>> phi_d(dofs_per_cell);
-//                std::vector<Tensor<1,rotation_dim>> phi_r(dofs_per_cell);
 
                 Tensor<2,dim> sigma, asigma, apId;
                 Tensor<1,rotation_dim> asym_i, asym_j;
@@ -835,20 +790,10 @@ namespace dd_biot
 						{
 							const double mu = lame_parameters_values[q][1];
 							const double lambda = lame_parameters_values[q][0];
-
-	//                        compliance_tensor(phi_s[i], mu, lambda, asigma);
 							compliance_tensor_pressure(phi_p[i], mu, lambda, apId);
-	//                        make_asymmetry_tensor(phi_s[i], asym_i);
-
-							//std::cout << "SOME PARAMS: " << prm.alpha << " " << prm.c_0 << " " << prm.time_step << " " << std::endl;
-
-//							cell->get_dof_indices (local_dof_indices);
 							for (unsigned int j=0; j<dofs_per_cell; ++j)
 								if(local_dof_indices[j]>=n_Elast)
 								{
-//									make_tensor(phi_s[j], sigma);
-//									make_asymmetry_tensor(phi_s[j], asym_j);
-
 
 									//std::cout << "Rotation: " << phi_r[i] << ", asym: " << asym_j << "\n";
 									local_matrix(i, j) += (  phi_u[i] * k_inverse_values[q] * phi_u[j] - phi_p[j] * div_phi_u[i]                                     // Darcy law
@@ -945,7 +890,6 @@ namespace dd_biot
                     endc = dof_handler_mortar.end();
             local_face_dof_indices.resize(fe_mortar.dofs_per_face);
         }
-//        double local_counter=0;
 
         for (;cell!=endc;++cell)
         {
@@ -959,14 +903,13 @@ namespace dd_biot
                     for (auto el : local_face_dof_indices){
                         if (el < n_stress)
                             interface_dofs_elast[cell->face(face_n)->boundary_id()-1].push_back(el);
-//                            local_counter++;
 
 
 
                     }
                 }
         }
-//        pcout<<"\n size of interface dofs: "<<local_counter<<"\n";
+
     }
 
 
@@ -1006,12 +949,10 @@ namespace dd_biot
                     for (auto el : local_face_dof_indices){
                         if (el>=n_Elast)
                             interface_dofs_darcy[cell->face(face_n)->boundary_id()-1].push_back(el);
-//                            local_counter++;
 
                     }
                 }
         }
-//        pcout<<"\n size of interface dofs: "<<local_counter<<"\n";
     }
 
 
@@ -1137,12 +1078,6 @@ namespace dd_biot
                                             + prm.alpha * prm.alpha * trace(apId) * phi_p[i]
                                             + prm.alpha * trace(asigma) * phi_p[i] )
                                            * fe_values.JxW(q);
-
-//                if (i == 27)
-//                  std::cout << i << ": " << prm.time_step*phi_p[i] * rhs_values_flow[q]
-//                                 << " " << prm.c_0*old_pressure_values[q] * phi_p[i]
-//                                 << " " <<  prm.alpha * prm.alpha * trace(apId) * phi_p[i]
-//                                 << " " << prm.alpha * trace(asigma) * phi_p[i] << std::endl;
 
                 for (unsigned d_i=0; d_i<dim; ++d_i)
                       local_rhs(i) += -(phi_d[i][d_i] * rhs_values_elast[q][d_i] * fe_values.JxW(q));
@@ -1279,14 +1214,6 @@ namespace dd_biot
 //            std::vector<std::vector<Tensor<1, dim>>> old_stress(dim, std::vector<Tensor<1,dim>> (n_q_points));
 
             fe_values[pressure].get_function_values (intermediate_solution, intermediate_pressure_values);
-//            for (unsigned int s_i=0; s_i<dim; ++s_i)
-//                fe_values[stresses[s_i]].get_function_values(old_solution, old_stress[s_i]);
-
-            // Transpose, can we avoid this?
-//            std::vector<std::vector<Tensor<1, dim>>> old_stress_values(n_q_points, std::vector<Tensor<1,dim>> (dim));
-//            for (unsigned int s_i=0; s_i<dim; ++s_i)
-//                for (unsigned int q=0; q<n_q_points; ++q)
-//                    old_stress_values[q][s_i] = old_stress[s_i][q];
             Tensor<2,dim> sigma;
             /////////////////////////////////////////////////////////
 
@@ -1315,12 +1242,6 @@ namespace dd_biot
                     local_rhs(i) += -(prm.alpha*scalar_product(apId, sigma) ) //we add pressure from previous step
                                              * fe_values.JxW(q);
 
-  //                if (i == 27)
-  //                  std::cout << i << ": " << prm.time_step*phi_p[i] * rhs_values_flow[q]
-  //                                 << " " << prm.c_0*old_pressure_values[q] * phi_p[i]
-  //                                 << " " <<  prm.alpha * prm.alpha * trace(apId) * phi_p[i]
-  //                                 << " " << prm.alpha * trace(asigma) * phi_p[i] << std::endl;
-
                   for (unsigned d_i=0; d_i<dim; ++d_i)
                         local_rhs(i) += -(phi_d[i][d_i] * rhs_values_elast[q][d_i] * fe_values.JxW(q));
                 }
@@ -1343,10 +1264,7 @@ namespace dd_biot
                     for (unsigned int q=0; q<n_face_q_points; ++q)
                         for (unsigned int i=0; i<dofs_per_cell; ++i)
                         	if(local_dof_indices[i]<n_Elast){
-//                            local_rhs(i) += -(fe_face_values[velocity].value (i, q) *
-//                                                       fe_face_values.normal_vector(q) *
-//                                                       boundary_values_flow[q] *
-//                                                       fe_face_values.JxW(q));
+
 
                             for (unsigned int d_i=0; d_i<dim; ++d_i)
                                 sigma_face[d_i] = fe_face_values[stresses[d_i]].value (i, q);
@@ -1358,7 +1276,6 @@ namespace dd_biot
                         }
                 }
 
-  //          local_rhs.print(std::cout);
 
 
             for (unsigned int i=0; i<dofs_per_cell; ++i)
@@ -1454,10 +1371,7 @@ namespace dd_biot
 
             std::vector<double> old_pressure_values(n_q_points);
             std::vector<double> intermediate_pressure_values(n_q_points);
-            std::vector<std::vector<Tensor<1, dim>>> old_stress(dim, std::vector<Tensor<1,dim>> (n_q_points));
-            //note that old_stress will be defined(according to split scheme) so that
-            // old_stress is the stress in the previous time step to intermediate_stress(also defined according to
-            // split scheme used). This will be defined in ::solve_time_step.
+            std::vector<std::vector<Tensor<1, dim>>> old_stress(dim, std::vector<Tensor<1,dim>> (n_q_points));.
             std::vector<std::vector<Tensor<1, dim>>> intermediate_stress(dim, std::vector<Tensor<1,dim>> (n_q_points));
 
             fe_values[pressure].get_function_values (old_solution, old_pressure_values);
@@ -1509,14 +1423,6 @@ namespace dd_biot
 										      - prm.alpha * trace(asigma2) * phi_p[i]									  )
                                              * fe_values.JxW(q);
 
-  //                if (i == 27)
-  //                  std::cout << i << ": " << prm.time_step*phi_p[i] * rhs_values_flow[q]
-  //                                 << " " << prm.c_0*old_pressure_values[q] * phi_p[i]
-  //                                 << " " <<  prm.alpha * prm.alpha * trace(apId) * phi_p[i]
-  //                                 << " " << prm.alpha * trace(asigma) * phi_p[i] << std::endl;
-
-//                  for (unsigned d_i=0; d_i<dim; ++d_i)
-//                        local_rhs(i) += -(phi_d[i][d_i] * rhs_values_elast[q][d_i] * fe_values.JxW(q));
                 }
             }
 
@@ -1530,8 +1436,7 @@ namespace dd_biot
                 {
                     fe_face_values.reinit (cell, face_no);
 
-//                    displacement_boundary_values.vector_value_list (fe_face_values.get_quadrature_points(),
-//                                                                    boundary_values_elast);
+
                     pressure_boundary_values.value_list(fe_face_values.get_quadrature_points(), boundary_values_flow);
 
                     for (unsigned int q=0; q<n_face_q_points; ++q)
@@ -1542,17 +1447,10 @@ namespace dd_biot
                                                        boundary_values_flow[q] *
                                                        fe_face_values.JxW(q));
 
-//                            for (unsigned int d_i=0; d_i<dim; ++d_i)
-//                                sigma[d_i] = fe_face_values[stresses[d_i]].value (i, q);
 
-//                            sigma_n = sigma * fe_face_values.normal_vector(q);
-//                            for (unsigned int d_i=0; d_i<dim; ++d_i)
-//                                local_rhs(i) += ((sigma_n[d_i] * boundary_values_elast[q][d_i])
-//                                                          * fe_face_values.JxW(q));
                         }
                 }
 
-  //          local_rhs.print(std::cout);
 
 
             for (unsigned int i=0; i<dofs_per_cell; ++i)
@@ -1661,10 +1559,8 @@ namespace dd_biot
 
         }
 
-//        const FEValuesExtractors::Vector velocity (dim*dim + dim + 0.5*dim*(dim-1));
 
         std::vector<std::vector<Tensor<1, dim>>> interface_values(dim, std::vector<Tensor<1, dim>> (n_face_q_points));
-//        std::vector<Tensor<1, dim>> interface_values_flux(n_face_q_points);
 
         typename DoFHandler<dim>::active_cell_iterator
                 cell = dof_handler.begin_active(),
@@ -1674,9 +1570,6 @@ namespace dd_biot
             local_rhs = 0;
             cell->get_dof_indices (local_dof_indices);
 
-//            Tensor<2,dim> sigma;
-//            Tensor<2,dim> interface_lambda;
-//            Tensor<1,dim> sigma_n;
             for (unsigned int face_n=0;
                  face_n<GeometryInfo<dim>::faces_per_cell;
                  ++face_n)
@@ -1687,20 +1580,11 @@ namespace dd_biot
                     for (unsigned int d_i=0; d_i<dim; ++d_i)
                         fe_face_values[stresses[d_i]].get_function_values (interface_fe_function, interface_values[d_i]);
 
-//                    fe_face_values[velocity].get_function_values (interface_fe_function, interface_values_flux);
 
                     for (unsigned int q=0; q<n_face_q_points; ++q)
                         for (unsigned int i=0; i<dofs_per_cell; ++i)
                         	if(local_dof_indices[i]<n_Elast)
                         	{
-//								local_rhs(i) += -(fe_face_values[velocity].value (i, q) *
-//												  fe_face_values.normal_vector(q) *
-//												  interface_values_flux[q] * get_normal_direction(cell->face(face_n)->boundary_id()-1) *
-//												  fe_face_values.normal_vector(q) *
-//												  fe_face_values.JxW(q));
-
-//								for (unsigned int d_i=0; d_i<dim; ++d_i)
-//									sigma[d_i] = fe_face_values[stresses[d_i]].value (i, q);
 
 								for (unsigned int d_i=0; d_i<dim; ++d_i)
 									local_rhs(i) += fe_face_values[stresses[d_i]].value (i, q) *
@@ -1732,18 +1616,9 @@ namespace dd_biot
           Vector<double>       local_rhs (dofs_per_cell);
           std::vector<types::global_dof_index> local_dof_indices (dofs_per_cell);
 
-//          std::vector<FEValuesExtractors::Vector> stresses(dim, FEValuesExtractors::Vector());
-//
-//          for (unsigned int d=0; d<dim; ++d)
-//          {
-//              const FEValuesExtractors::Vector tmp_stress(d*dim);
-//              stresses[d].first_vector_component = tmp_stress.first_vector_component;
-//
-//          }
 
           const FEValuesExtractors::Vector velocity (dim*dim + dim + 0.5*dim*(dim-1));
 
-//          std::vector<std::vector<Tensor<1, dim>>> interface_values(dim, std::vector<Tensor<1, dim>> (n_face_q_points));
           std::vector<Tensor<1, dim>> interface_values_flux(n_face_q_points);
 
           typename DoFHandler<dim>::active_cell_iterator
@@ -2599,9 +2474,9 @@ namespace dd_biot
 
 
 
-              pcout << "\r  ..." << cg_iteration
-                    << " iterations completed, (residual = " << combined_error_iter
-                    << ")..." << std::flush;
+//              pcout << "\r  ..." << cg_iteration
+//                    << " iterations completed, (residual = " << combined_error_iter
+//                    << ")..." << std::flush;
               // Exit criterion
               if (combined_error_iter/e_all_iter[0] < tolerance)
                 {

@@ -30,7 +30,7 @@ int main (int argc, char *argv[])
         mesh_m2d[4] = {1,1};
         double c0=1;
         double alpha=1;
-        int num_cycle=2;
+        int num_cycle=6;
         int max_itr=500;
         double tolerence = 1.e-12;
         BiotParameters bparam (0.001,1,c0,alpha);
@@ -46,7 +46,7 @@ int main (int argc, char *argv[])
 
      //BiotDD with mortar
         MixedBiotProblemDD<2> lin_mortar(1,bparam,1,1,0);
-        MixedBiotProblemDD<2> quad_mortar(1,bparam,1,2,0);
+        MixedBiotProblemDD<2> quad_mortar(1,bparam,2,2,0);
         MixedBiotProblemDD<2> cubic_mortar(1,bparam,1,3,0);
 
 //        lin_mortar.run(num_cycle,mesh_m2d,tolerence,max_itr);
