@@ -1371,7 +1371,7 @@ namespace dd_biot
 
             std::vector<double> old_pressure_values(n_q_points);
             std::vector<double> intermediate_pressure_values(n_q_points);
-            std::vector<std::vector<Tensor<1, dim>>> old_stress(dim, std::vector<Tensor<1,dim>> (n_q_points));.
+            std::vector<std::vector<Tensor<1, dim>>> old_stress(dim, std::vector<Tensor<1,dim>> (n_q_points));
             std::vector<std::vector<Tensor<1, dim>>> intermediate_stress(dim, std::vector<Tensor<1,dim>> (n_q_points));
 
             fe_values[pressure].get_function_values (old_solution, old_pressure_values);
@@ -1629,18 +1629,12 @@ namespace dd_biot
               local_rhs = 0;
               cell->get_dof_indices (local_dof_indices);
 
-//              Tensor<2,dim> sigma;
-//              Tensor<2,dim> interface_lambda;
-//              Tensor<1,dim> sigma_n;
               for (unsigned int face_n=0;
                    face_n<GeometryInfo<dim>::faces_per_cell;
                    ++face_n)
                   if (cell->at_boundary(face_n) && cell->face(face_n)->boundary_id() != 0)
                   {
                       fe_face_values.reinit (cell, face_n);
-
-//                      for (unsigned int d_i=0; d_i<dim; ++d_i)
-//                          fe_face_values[stresses[d_i]].get_function_values (interface_fe_function, interface_values[d_i]);
 
                       fe_face_values[velocity].get_function_values (interface_fe_function, interface_values_flux);
 
@@ -1653,16 +1647,6 @@ namespace dd_biot
 													interface_values_flux[q] * get_normal_direction(cell->face(face_n)->boundary_id()-1) *
 													fe_face_values.normal_vector(q) *
 													fe_face_values.JxW(q));
-
-//								  for (unsigned int d_i=0; d_i<dim; ++d_i)
-//									  sigma[d_i] = fe_face_values[stresses[d_i]].value (i, q);
-//
-//								  for (unsigned int d_i=0; d_i<dim; ++d_i)
-//									  local_rhs(i) += fe_face_values[stresses[d_i]].value (i, q) *
-//													  fe_face_values.normal_vector(q) *
-//													  interface_values[d_i][q] * get_normal_direction(cell->face(face_n)->boundary_id()-1) *
-//													  fe_face_values.normal_vector(q) *
-//													  fe_face_values.JxW(q);
 							  }
                   }
 
@@ -1943,12 +1927,6 @@ namespace dd_biot
                 project_mortar(P_fine2coarse, dof_handler, solution_star, quad, constraints, neighbors, dof_handler_mortar, multiscale_basis[ind]);
                 ind += 1;
             }
-//                std::ofstream rhs_output_file("multi_basis.txt");
-//                for(int i =0; i<multiscale_basis.size();i++){
-//                	for(int j=0;j<multiscale_basis[i].size();j++)
-//                		rhs_output_file<<multiscale_basis[i][j]<<"\t";
-//                	rhs_output_file<<"\n"<<i+1<<" : ";
-//                }
 
     }
 
@@ -2008,13 +1986,9 @@ namespace dd_biot
       	 //Eliminate H(i+1,i)
       	 h[k] = cs_k*h[k] + sn_k*h[k+1];
       	 h[k+1] = 0.0;
-      	 //adding cs_k and sn_k as cs(k) and sn(k)
-//      	 cs.push_back(cs_k);
       	 cs[k]=cs_k;
-//      	 sn.push_back(sn_k);
       	 sn[k]=sn_k;
-    //   	pcout<<"\n cs value is: "<<cs[k]<<"\n";
-    //   	pcout<<"\n sn value is: "<<sn[k]<<"\n";
+
       }
 
 
@@ -2313,11 +2287,7 @@ namespace dd_biot
                         solution_star_mortar.block(3).sadd(1.0, interface_data[side][i], multiscale_basis[j].block(3));
                           j += 1;
                       }
-//                  	  if(k_counter==0){
-//                          std::ofstream rhs_output_file("solution_star_mortar.txt");
-//                          for(int i =0; i<solution_star_mortar.size();i++)
-//                        	  rhs_output_file<<i<<" : "<<solution_star_mortar[i]<<"\n";
-//                  	  }
+
               }
               else
               {
@@ -2347,7 +2317,6 @@ namespace dd_biot
               }
 
               //defing q  to push_back to Q (Arnoldi algorithm)
-    //          std::vector<std::vector<double>> q(n_faces_per_cell);
               //defing h  to push_back to H (Arnoldi algorithm)
               std::vector<double> h(k_counter+2,0);
 
@@ -2355,10 +2324,6 @@ namespace dd_biot
               for (unsigned int side = 0; side < n_faces_per_cell; ++side)
                 if (neighbors[side] >= 0)
                   {
-    //                alpha_side[side]   = 0;
-    //                alpha_side_d[side] = 0;
-    //                beta_side[side]    = 0;
-    //                beta_side_d[side]  = 0;
 
                     // Create vector of u\dot n to send
                     if (mortar_flag)
@@ -2517,11 +2482,6 @@ namespace dd_biot
                           lambda[side][i] += Q_side[side][j][i]*y[j];
           //we can replace lambda here and just add interface_data(skip one step below)
 
-//              interface_data = lambda;
-//              for (unsigned int side = 0; side < n_faces_per_cell; ++side)
-//                for (unsigned int i = 0; i < interface_dofs[side].size(); ++i)
-//                  interface_fe_function[interface_dofs[side][i]] =
-//                    interface_data[side][i];
 
           if (mortar_flag)
                  {
@@ -2635,10 +2595,7 @@ namespace dd_biot
       else if (split_order_flag==1)
     	  solve_bar_darcy();
       interface_fe_function.reinit(solution);
-//      if(split_order_flag==0)
-//    	  interface_fe_function.reinit(solution_bar_elast);
-//      else if(split_order_flag==1)
-//          	  interface_fe_function.reinit(solution_bar_darcy);
+
 
       double l0 = 0.0;
       // CG with rhs being 0 and initial guess lambda = 0
@@ -2662,8 +2619,7 @@ namespace dd_biot
         		                lambda = lambda_guess_elast;
         		              }
             r[side].resize(interface_dofs_elast[side].size(), 0);
-//            std::vector<double> r_receive_buffer(r[side].size());
-//            r_receive_buffer.resize(r[side].size(),0);
+
 
             // Right now it is effectively solution_bar - A\lambda (0)
               for (unsigned int i = 0; i < interface_dofs_elast[side].size(); ++i){
@@ -2688,8 +2644,6 @@ namespace dd_biot
         		              }
 
                  r[side].resize(interface_dofs_darcy[side].size(), 0);
-
-//                 r_receive_buffer.resize(r[side].size(),0);
 
                  // Right now it is effectively solution_bar - A\lambda (0)
                    for (unsigned int i = 0; i < interface_dofs_darcy[side].size(); ++i)
@@ -3685,7 +3639,7 @@ namespace dd_biot
                 else if (mortar_degree <= 2)
                     triangulation.refine_global(1);
                 else if (mortar_degree > 2)
-                    triangulation.refine_global(2);
+                    triangulation.refine_global(1);
 
                 if (mortar_flag){
                     triangulation_mortar.refine_global(1);
