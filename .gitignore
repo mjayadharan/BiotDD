@@ -8,3 +8,5 @@ CMakeFiles/
 cmake_install.cmake
 .project
 Makefile
+*.tex
+*.lyx
