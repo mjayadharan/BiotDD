@@ -2916,7 +2916,7 @@ namespace dd_biot
 
     // MixedBiotProblemDD::compute_interface_error
     template <int dim>
-    double MixedBiotProblemDD<dim>::compute_interface_error(Function<dim> &exact_solution)
+    double MixedBiotProblemDD<dim>::compute_interface_error()
     {
         system_rhs_star = 0;
 
@@ -2934,7 +2934,15 @@ namespace dd_biot
         std::vector<types::global_dof_index> local_dof_indices (dofs_per_cell);
 
         std::vector<FEValuesExtractors::Vector> stresses(dim, FEValuesExtractors::Vector());
-        const FEValuesExtractors::Scalar pressure(dim*dim + dim + 0.5*dim*(dim-1)+dim);
+        const FEValuesExtractors::Vector velocity (dim*dim + dim + 0.5*dim*(dim-1));
+//        const FEValuesExtractors::Scalar pressure(dim*dim + dim + 0.5*dim*(dim-1)+dim);
+
+        DisplacementBoundaryValues<dim> displacement_boundary_values;
+        PressureBoundaryValues<dim>     pressure_boundary_values;
+
+        displacement_boundary_values.set_time(prm.time);
+        pressure_boundary_values.set_time(prm.time);
+
         for (unsigned int d=0; d<dim; ++d)
         {
             const FEValuesExtractors::Vector tmp_stress(d*dim);
@@ -2942,9 +2950,12 @@ namespace dd_biot
 
         }
 
-        std::vector<std::vector<Tensor<1, dim>>> interface_values(dim, std::vector<Tensor<1, dim>> (n_face_q_points));
+        std::vector<std::vector<Tensor<1, dim>>> interface_values_elast(dim, std::vector<Tensor<1, dim>> (n_face_q_points));
+        std::vector<Tensor<1, dim>> interface_values_flux(n_face_q_points);
         std::vector<std::vector<Tensor<1, dim>>> solution_values(dim, std::vector<Tensor<1, dim>> (n_face_q_points));
         std::vector<Vector<double>> displacement_values (n_face_q_points, Vector<double> (dim));
+        std::vector<double> pressure_values(n_face_q_points);
+//        Vector<double> pressure_values(n_face_q_points);
 
         // Assemble rhs for star problem with data = u - lambda_H on interfaces
         typename DoFHandler<dim>::active_cell_iterator
@@ -2963,24 +2974,36 @@ namespace dd_biot
                     fe_face_values.reinit (cell, face_n);
 
                     for (unsigned int d_i=0; d_i<dim; ++d_i)
-                        fe_face_values[stresses[d_i]].get_function_values (interface_fe_function, interface_values[d_i]);
+                        fe_face_values[stresses[d_i]].get_function_values (interface_fe_function, interface_values_elast[d_i]);
 
-                    exact_solution.vector_value_list(fe_face_values.get_quadrature_points(),
+                    fe_face_values[velocity].get_function_values (interface_fe_function, interface_values_flux);
+
+                    displacement_boundary_values.vector_value_list(fe_face_values.get_quadrature_points(),
                                                      displacement_values);
+                    pressure_boundary_values.value_list(fe_face_values.get_quadrature_points(), pressure_values);
+//                    Vector<double >pressure_values(boundary_values_flow.begin(),boundary_values_flow.end());
 
                     for (unsigned int q=0; q<n_face_q_points; ++q)
                         for (unsigned int i=0; i<dofs_per_cell; ++i)
                         {
-                            Tensor<2,dim> sigma;
-                            Tensor<2,dim> interface_lambda;
-                            for (unsigned int d_i=0; d_i<dim; ++d_i)
-                                fe_face_values[stresses[d_i]].get_function_values (interface_fe_function, interface_values[d_i]);
+//                            Tensor<2,dim> sigma;
+//                            Tensor<2,dim> interface_lambda;
+//                            for (unsigned int d_i=0; d_i<dim; ++d_i)
+//                                fe_face_values[stresses[d_i]].get_function_values (interface_fe_function, interface_values_elast[d_i]);
 
-                            Tensor<1,dim> sigma_n = sigma * fe_face_values.normal_vector(q);
+//                            Tensor<1,dim> sigma_n = sigma * fe_face_values.normal_vector(q);
+
+                        	 local_rhs(i) += (fe_face_values[velocity].value (i, q) *
+                        	                 fe_face_values.normal_vector(q) *
+                        	                 (interface_values_flux[q] * get_normal_direction(cell->face(face_n)->boundary_id()-1) *
+                        	                 fe_face_values.normal_vector(q) - pressure_values[q])) *
+                        	                 fe_face_values.JxW(q);
+
+
                             for (unsigned int d_i=0; d_i<dim; ++d_i)
                                 local_rhs(i) += fe_face_values[stresses[d_i]].value (i, q) *
                                                 fe_face_values.normal_vector(q) *
-                                                (displacement_values[q][d_i] - interface_values[d_i][q] * get_normal_direction(cell->face(face_n)->boundary_id()-1) *
+                                                (displacement_values[q][d_i] - interface_values_elast[d_i][q] * get_normal_direction(cell->face(face_n)->boundary_id()-1) *
                                                                                fe_face_values.normal_vector(q)) *
                                                 fe_face_values.JxW(q);
                         }
@@ -2991,7 +3014,7 @@ namespace dd_biot
 
         }
 
-        // Solve star problem with data given by p - lambda_h
+        // Solve star problem with data given by (u,p) - (lambda_u,lambda_p).
         solve_star();
 
         // Project the solution to the mortar space
@@ -3021,16 +3044,16 @@ namespace dd_biot
                     for (unsigned int d_i=0; d_i<dim; ++d_i)
                     {
                         fe_face_values_mortar[stresses[d_i]].get_function_values (solution_star_mortar, solution_values[d_i]);
-                        fe_face_values_mortar[stresses[d_i]].get_function_values (interface_fe_function_mortar, interface_values[d_i]);
+                        fe_face_values_mortar[stresses[d_i]].get_function_values (interface_fe_function_mortar, interface_values_elast[d_i]);
                     }
 
-                    exact_solution.vector_value_list(fe_face_values_mortar.get_quadrature_points(),
+                    displacement_boundary_values.vector_value_list(fe_face_values_mortar.get_quadrature_points(),
                                                      displacement_values);
 
                     for (unsigned int q=0; q<n_face_q_points; ++q)
                         for (unsigned int d_i=0; d_i<dim; ++d_i)
                             res += fabs(fe_face_values_mortar.normal_vector(q) * solution_values[d_i][q] *
-                                        (displacement_values[q][d_i] - fe_face_values_mortar.normal_vector(q) * interface_values[d_i][q] * get_normal_direction(cell->face(face_n)->boundary_id()-1)) *
+                                        (displacement_values[q][d_i] - fe_face_values_mortar.normal_vector(q) * interface_values_elast[d_i][q] * get_normal_direction(cell->face(face_n)->boundary_id()-1)) *
                                         fe_face_values_mortar.JxW(q));
                 }
         }
@@ -3271,11 +3294,11 @@ namespace dd_biot
         {
             DisplacementBoundaryValues<dim> displ_solution;
             displ_solution.set_time(prm.time);
-            l_int_error_elast = compute_interface_error(displ_solution);
+            l_int_error_elast = compute_interface_error();
 
             interface_fe_function = 0;
             interface_fe_function_mortar = 0;
-            l_int_norm_elast = compute_interface_error(displ_solution);
+            l_int_norm_elast = compute_interface_error();
         }
 //
 //

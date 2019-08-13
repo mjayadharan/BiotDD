@@ -129,7 +129,7 @@ namespace dd_biot
         void local_cg(const unsigned int maxiter,  unsigned int split_order_flag=0); //split_order_flag=0 is Elasticity part, 1 is Darcy part
         void local_cg_elast(const unsigned int maxiter);
         void local_cg_darcy(const unsigned int maxiter);
-        double compute_interface_error(Function <dim> &exact_solution);
+        double compute_interface_error();
         void compute_errors(const unsigned int cycle);
         void output_results(const unsigned int cycle, const unsigned int refine);
 
