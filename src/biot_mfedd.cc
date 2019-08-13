@@ -2934,6 +2934,7 @@ namespace dd_biot
         std::vector<types::global_dof_index> local_dof_indices (dofs_per_cell);
 
         std::vector<FEValuesExtractors::Vector> stresses(dim, FEValuesExtractors::Vector());
+        const FEValuesExtractors::Scalar pressure(dim*dim + dim + 0.5*dim*(dim-1)+dim);
         for (unsigned int d=0; d<dim; ++d)
         {
             const FEValuesExtractors::Vector tmp_stress(d*dim);
@@ -3269,6 +3270,7 @@ namespace dd_biot
         if (mortar_flag)
         {
             DisplacementBoundaryValues<dim> displ_solution;
+            displ_solution.set_time(prm.time);
             l_int_error_elast = compute_interface_error(displ_solution);
 
             interface_fe_function = 0;
