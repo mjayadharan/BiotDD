@@ -3362,7 +3362,8 @@ namespace dd_biot
 //          else
 //            recv_buf_num[i] = recv_buf_num[i];
  //    Calculating the relative error in mortar displacement.
-        recv_buf_num[11] = sqrt(recv_buf_num[11])/sqrt(recv_buf_den[11]);
+//        recv_buf_num[11] = sqrt(recv_buf_num[11])/sqrt(recv_buf_den[11]);
+        recv_buf_num[11] = recv_buf_num[11]/recv_buf_den[11];
 
         convergence_table.add_value("cycle", cycle);
         if(split_flag==0)
