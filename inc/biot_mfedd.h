@@ -129,7 +129,7 @@ namespace dd_biot
         void local_cg(const unsigned int maxiter,  unsigned int split_order_flag=0); //split_order_flag=0 is Elasticity part, 1 is Darcy part
         void local_cg_elast(const unsigned int maxiter);
         void local_cg_darcy(const unsigned int maxiter);
-        double compute_interface_error();
+        std::vector<double> compute_interface_error(); //return_vector[0] gives interface_error for elast part and return_vector[1] gives that of flow part.
         void compute_errors(const unsigned int cycle);
         void output_results(const unsigned int cycle, const unsigned int refine);
 
