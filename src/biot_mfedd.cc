@@ -3064,6 +3064,7 @@ namespace dd_biot
         }
 //        std::vector<double> return_vector(1,sqrt(res));
 //        return sqrt(res);
+//        return_vector[1]+= return_vector[0];
         return_vector[0]=sqrt(return_vector[0]);
         return_vector[1]=sqrt(return_vector[1]);
         return return_vector;
@@ -3299,6 +3300,7 @@ namespace dd_biot
 
       double l_int_error_elast=1, l_int_norm_elast=1;
       double l_int_error_darcy=1, l_int_norm_darcy=1;
+//      double l_int_error=1, l_int_norm=1;
         if (mortar_flag)
         {
             DisplacementBoundaryValues<dim> displ_solution;
@@ -3308,6 +3310,10 @@ namespace dd_biot
 //            l_int_error_elast = compute_interface_error();
             l_int_error_elast =tmp_err_vect[0];
             l_int_error_darcy =tmp_err_vect[1];
+//            if(split_flag==0){
+//            	l_int_error=pow(l_int_error_elast,2)+pow(l_int_error_darcy,2);
+//            	l_int_error= sqrt(l_int_error);
+//            }
 
             interface_fe_function = 0;
             interface_fe_function_mortar = 0;
@@ -3315,6 +3321,10 @@ namespace dd_biot
 //            l_int_norm_elast = compute_interface_error();
             l_int_norm_elast = tmp_err_vect[0];
             l_int_norm_darcy = tmp_err_vect[1];
+//            if(split_flag==0){
+//                l_int_norm=pow(l_int_norm_elast,2)+pow(l_int_norm_darcy,2);
+//                l_int_norm= sqrt(l_int_norm);
+//            }
         }
 
 
@@ -3365,8 +3375,8 @@ namespace dd_biot
 //          else
 //            recv_buf_num[i] = recv_buf_num[i];
  //    Calculating the relative error in mortar displacement.
-        recv_buf_num[11] = recv_buf_num[11]/recv_buf_den[11];
-        recv_buf_num[12] = recv_buf_num[12]/recv_buf_den[12];
+//        recv_buf_num[11] = recv_buf_num[11]/recv_buf_den[11];
+//        recv_buf_num[12] = recv_buf_num[12]/recv_buf_den[12];
 
         convergence_table.add_value("cycle", cycle);
         if(split_flag==0)
@@ -3393,8 +3403,14 @@ namespace dd_biot
 //        convergence_table.add_value("Rotat,L2-L2", recv_buf_num[10]);
         if (mortar_flag)
         {
-          convergence_table.add_value("Lambda,Elast", recv_buf_num[11]);
-          convergence_table.add_value("Lambda,Darcy", recv_buf_num[12]);
+          convergence_table.add_value("Lambda,Elast", recv_buf_num[11]/recv_buf_den[11]);
+          convergence_table.add_value("Lambda,Darcy", recv_buf_num[12]/recv_buf_den[12]);
+          if(split_flag==0)
+          {
+        	double combined_l_int_error =(pow(recv_buf_num[11],2) + pow(recv_buf_num[12],2))/(pow(recv_buf_den[11],2) + pow(recv_buf_den[12],2));
+        	combined_l_int_error = sqrt(combined_l_int_error);
+        	convergence_table.add_value("Lambda,Biot", combined_l_int_error);
+          }
         }
       }
     }
@@ -3585,6 +3601,13 @@ namespace dd_biot
           convergence_table.set_scientific("Lambda,Darcy", true);
           convergence_table.set_tex_caption("Lambda,Darcy", "$ \\|p - \\lambda_p_H\\|_{d_H} $");
           convergence_table.evaluate_convergence_rates("Lambda,Darcy", ConvergenceTable::reduction_rate_log2);
+
+          if(split_flag==0){
+        	  convergence_table.set_precision("Lambda,Biot", 3);
+        	  convergence_table.set_scientific("Lambda,Biot", true);
+        	  convergence_table.set_tex_caption("Lambda,Biot", "$ \\|(u,p) - \\lambda_H\\|_{d_H} $");
+        	  convergence_table.evaluate_convergence_rates("Lambda,Biot", ConvergenceTable::reduction_rate_log2);
+          }
         }
 
         std::ofstream error_table_file("error" + std::to_string(Utilities::MPI::n_mpi_processes(mpi_communicator)) + "domains.tex");
