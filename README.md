@@ -12,7 +12,7 @@ Code developed to simulate time-dependent diffusion problem using Multiscale Mor
 Manu Jayadharan, Department of Mathematics at University of Pittsburgh, 9/17/2019
 
 email: [manu.jayadharan@gmail.com](mailto:manu.jayadharan@gmail.com), [manu.jayadharan@pitt.edu](mailto:manu.jayadharan@pitt.edu)  
-[reserachgate link](https://www.researchgate.net/profile/Manu_Jayadharan)  
+[researchgate link](https://www.researchgate.net/profile/Manu_Jayadharan)  
 [linkedin profile](https://www.linkedin.com/in/manu-jayadharan/)  
  
 Eldar Khattatov, Department of Mathematics at University of Pittsburgh, 2018  
