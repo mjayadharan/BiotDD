@@ -1,5 +1,7 @@
-# Multisacale Mortar Finite Element Implementation for Biot system(BIOTDD-MMMFE)
-Fluid flow simulator based on Biot system of poroelasticity, using Mixed Finite Element method with domain decomposotion techniques to improve computational efficiency.
+# [Multisacale Mortar Finite Element Implementation for Biot system(BIOTDD-MMMFE)](https://arxiv.org/abs/2010.15353)
+Fluid flow simulator based on Biot system of poroelasticity, using Mixed Finite Element method with domain decomposotion techniques to improve computational efficiency.  
+  
+__Related publication__: M. Jayadharan, E. Khattatov, I. Yotov, Domain decomposition and partitioning methods for mixed finite element discretization of the Biot system of poroelasticity, [arxiv math.NA, 2010.15353](https://arxiv.org/abs/2010.15353).
 
 Code developed to simulate time-dependent diffusion problem using Multiscale Mortar Mixed Finite Elements(MMMFE). Model can be easily adapted to simulate other fluid flow models based on linear PDEs. Sub-domain solves are done in parallel across different processors using MPI. Computed solutions are outputted and visualized on a global space-time grid in the .vtk and .vtu formats. 
 ### Note:
