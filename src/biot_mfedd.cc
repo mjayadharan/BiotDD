@@ -2916,9 +2916,10 @@ namespace dd_biot
 
     // MixedBiotProblemDD::compute_interface_error
     template <int dim>
-    double MixedBiotProblemDD<dim>::compute_interface_error(Function<dim> &exact_solution)
+    std::vector<double> MixedBiotProblemDD<dim>::compute_interface_error()
     {
         system_rhs_star = 0;
+        std::vector<double> return_vector(2,0);
 
         QGauss<dim-1> quad (qdegree);
         QGauss<dim-1> project_quad (qdegree);
@@ -2934,6 +2935,15 @@ namespace dd_biot
         std::vector<types::global_dof_index> local_dof_indices (dofs_per_cell);
 
         std::vector<FEValuesExtractors::Vector> stresses(dim, FEValuesExtractors::Vector());
+        const FEValuesExtractors::Vector velocity (dim*dim + dim + 0.5*dim*(dim-1));
+//        const FEValuesExtractors::Scalar pressure(dim*dim + dim + 0.5*dim*(dim-1)+dim);
+
+        DisplacementBoundaryValues<dim> displacement_boundary_values;
+        PressureBoundaryValues<dim>     pressure_boundary_values;
+
+        displacement_boundary_values.set_time(prm.time);
+        pressure_boundary_values.set_time(prm.time);
+
         for (unsigned int d=0; d<dim; ++d)
         {
             const FEValuesExtractors::Vector tmp_stress(d*dim);
@@ -2941,9 +2951,13 @@ namespace dd_biot
 
         }
 
-        std::vector<std::vector<Tensor<1, dim>>> interface_values(dim, std::vector<Tensor<1, dim>> (n_face_q_points));
-        std::vector<std::vector<Tensor<1, dim>>> solution_values(dim, std::vector<Tensor<1, dim>> (n_face_q_points));
+        std::vector<std::vector<Tensor<1, dim>>> interface_values_mech(dim, std::vector<Tensor<1, dim>> (n_face_q_points));
+        std::vector<Tensor<1, dim>> interface_values_flux(n_face_q_points);
+        std::vector<std::vector<Tensor<1, dim>>> solution_values_mech(dim, std::vector<Tensor<1, dim>> (n_face_q_points));
+        std::vector<Tensor<1, dim>> solution_values_flow(n_face_q_points);
         std::vector<Vector<double>> displacement_values (n_face_q_points, Vector<double> (dim));
+        std::vector<double> pressure_values(n_face_q_points);
+//        Vector<double> pressure_values(n_face_q_points);
 
         // Assemble rhs for star problem with data = u - lambda_H on interfaces
         typename DoFHandler<dim>::active_cell_iterator
@@ -2962,24 +2976,30 @@ namespace dd_biot
                     fe_face_values.reinit (cell, face_n);
 
                     for (unsigned int d_i=0; d_i<dim; ++d_i)
-                        fe_face_values[stresses[d_i]].get_function_values (interface_fe_function, interface_values[d_i]);
+                        fe_face_values[stresses[d_i]].get_function_values (interface_fe_function, interface_values_mech[d_i]);
 
-                    exact_solution.vector_value_list(fe_face_values.get_quadrature_points(),
+                    fe_face_values[velocity].get_function_values (interface_fe_function, interface_values_flux);
+
+                    displacement_boundary_values.vector_value_list(fe_face_values.get_quadrature_points(),
                                                      displacement_values);
+                    pressure_boundary_values.value_list(fe_face_values.get_quadrature_points(), pressure_values);
+//                    Vector<double >pressure_values(boundary_values_flow.begin(),boundary_values_flow.end());
 
                     for (unsigned int q=0; q<n_face_q_points; ++q)
                         for (unsigned int i=0; i<dofs_per_cell; ++i)
                         {
-                            Tensor<2,dim> sigma;
-                            Tensor<2,dim> interface_lambda;
-                            for (unsigned int d_i=0; d_i<dim; ++d_i)
-                                fe_face_values[stresses[d_i]].get_function_values (interface_fe_function, interface_values[d_i]);
 
-                            Tensor<1,dim> sigma_n = sigma * fe_face_values.normal_vector(q);
+                        	 local_rhs(i) += (fe_face_values[velocity].value (i, q) *
+                        	                 fe_face_values.normal_vector(q) *
+                        	                 (interface_values_flux[q] * get_normal_direction(cell->face(face_n)->boundary_id()-1) *
+                        	                 fe_face_values.normal_vector(q) - pressure_values[q])) *
+                        	                 fe_face_values.JxW(q);
+
+
                             for (unsigned int d_i=0; d_i<dim; ++d_i)
                                 local_rhs(i) += fe_face_values[stresses[d_i]].value (i, q) *
                                                 fe_face_values.normal_vector(q) *
-                                                (displacement_values[q][d_i] - interface_values[d_i][q] * get_normal_direction(cell->face(face_n)->boundary_id()-1) *
+                                                (displacement_values[q][d_i] - interface_values_mech[d_i][q] * get_normal_direction(cell->face(face_n)->boundary_id()-1) *
                                                                                fe_face_values.normal_vector(q)) *
                                                 fe_face_values.JxW(q);
                         }
@@ -2990,16 +3010,16 @@ namespace dd_biot
 
         }
 
-        // Solve star problem with data given by p - lambda_h
+        // Solve star problem with data given by (u,p) - (lambda_u,lambda_p).
         solve_star();
 
         // Project the solution to the mortar space
         ConstraintMatrix constraints;
         constraints.clear();
         constraints.close();
-//        project_mortar(P_fine2coarse, dof_handler, solution_star, project_quad, constraints, neighbors, dof_handler_mortar, solution_star_mortar);
+        project_mortar(P_fine2coarse, dof_handler, solution_star, project_quad, constraints, neighbors, dof_handler_mortar, solution_star_mortar);
 
-        double res = 0;
+//        double res = 0;
 
         FEFaceValues<dim> fe_face_values_mortar (fe_mortar, quad,
                                                  update_values    | update_normal_vectors |
@@ -3019,22 +3039,35 @@ namespace dd_biot
 
                     for (unsigned int d_i=0; d_i<dim; ++d_i)
                     {
-                        fe_face_values_mortar[stresses[d_i]].get_function_values (solution_star_mortar, solution_values[d_i]);
-                        fe_face_values_mortar[stresses[d_i]].get_function_values (interface_fe_function_mortar, interface_values[d_i]);
+                        fe_face_values_mortar[stresses[d_i]].get_function_values (solution_star_mortar, solution_values_mech[d_i]);
+                        fe_face_values_mortar[stresses[d_i]].get_function_values (interface_fe_function_mortar, interface_values_mech[d_i]);
                     }
 
-                    exact_solution.vector_value_list(fe_face_values_mortar.get_quadrature_points(),
+                    fe_face_values_mortar[velocity].get_function_values(solution_star_mortar,solution_values_flow);
+                    fe_face_values_mortar[velocity].get_function_values (interface_fe_function_mortar, interface_values_flux);
+
+                    displacement_boundary_values.vector_value_list(fe_face_values_mortar.get_quadrature_points(),
                                                      displacement_values);
+                    pressure_boundary_values.value_list(fe_face_values.get_quadrature_points(), pressure_values);
 
                     for (unsigned int q=0; q<n_face_q_points; ++q)
+                    {
                         for (unsigned int d_i=0; d_i<dim; ++d_i)
-                            res += fabs(fe_face_values_mortar.normal_vector(q) * solution_values[d_i][q] *
-                                        (displacement_values[q][d_i] - fe_face_values_mortar.normal_vector(q) * interface_values[d_i][q] * get_normal_direction(cell->face(face_n)->boundary_id()-1)) *
+                            return_vector[0] += fabs(fe_face_values_mortar.normal_vector(q) * solution_values_mech[d_i][q] *
+                                        (displacement_values[q][d_i] - fe_face_values_mortar.normal_vector(q) * interface_values_mech[d_i][q] * get_normal_direction(cell->face(face_n)->boundary_id()-1)) *
                                         fe_face_values_mortar.JxW(q));
+                        return_vector[1] += fabs(fe_face_values_mortar.normal_vector(q) * solution_values_flow[q] *
+                                                                (pressure_values[q] - fe_face_values_mortar.normal_vector(q) * interface_values_flux[q] * get_normal_direction(cell->face(face_n)->boundary_id()-1)) *
+                                                                fe_face_values_mortar.JxW(q));
+                    }
                 }
         }
-
-        return sqrt(res);
+//        std::vector<double> return_vector(1,sqrt(res));
+//        return sqrt(res);
+//        return_vector[1]+= return_vector[0];
+        return_vector[0]=sqrt(return_vector[0]);
+        return_vector[1]=sqrt(return_vector[1]);
+        return return_vector;
     }
 
 
@@ -3265,31 +3298,34 @@ namespace dd_biot
       err.velocity_stress_l2_div_errors[1] += s_hd_error;
       err.velocity_stress_l2_div_norms[1] += s_hd_norm;     // put += back!
 
+      double l_int_error_elast=1, l_int_norm_elast=1;
+      double l_int_error_darcy=1, l_int_norm_darcy=1;
 //      double l_int_error=1, l_int_norm=1;
-//        if (mortar_flag)
-//        {
-//            DisplacementBoundaryValues<dim> displ_solution;
-//            l_int_error = compute_interface_error(displ_solution);
-//
-//            interface_fe_function = 0;
-//            interface_fe_function_mortar = 0;
-//            l_int_norm = compute_interface_error(displ_solution);
-//        }
-//
-//
-//        if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
-//        {
-//            convergence_table.add_value("cycle", cycle);
-//            convergence_table.add_value("# CG", cg_iteration);
-//            convergence_table.add_value("Stress,L2", recv_buf_num[0]);
-//            convergence_table.add_value("Stress,Hdiv", recv_buf_num[1]);
-//            convergence_table.add_value("Displ,L2", recv_buf_num[2]);
-//            convergence_table.add_value("Displ,L2mid", recv_buf_num[3]);
-//            convergence_table.add_value("Rotat,L2", recv_buf_num[4]);
-//
-//            if (mortar_flag)
-//                convergence_table.add_value("Lambda,Int", recv_buf_num[6]);
-//        }
+        if (mortar_flag)
+        {
+            DisplacementBoundaryValues<dim> displ_solution;
+            displ_solution.set_time(prm.time);
+            std::vector<double> tmp_err_vect(2,0);
+            tmp_err_vect = compute_interface_error();
+//            l_int_error_elast = compute_interface_error();
+            l_int_error_elast =tmp_err_vect[0];
+            l_int_error_darcy =tmp_err_vect[1];
+//            if(split_flag==0){
+//            	l_int_error=pow(l_int_error_elast,2)+pow(l_int_error_darcy,2);
+//            	l_int_error= sqrt(l_int_error);
+//            }
+
+            interface_fe_function = 0;
+            interface_fe_function_mortar = 0;
+            tmp_err_vect = compute_interface_error();
+//            l_int_norm_elast = compute_interface_error();
+            l_int_norm_elast = tmp_err_vect[0];
+            l_int_norm_darcy = tmp_err_vect[1];
+//            if(split_flag==0){
+//                l_int_norm=pow(l_int_norm_elast,2)+pow(l_int_norm_darcy,2);
+//                l_int_norm= sqrt(l_int_norm);
+//            }
+        }
 
 
       // On the last time step compute actual errors
@@ -3299,7 +3335,7 @@ namespace dd_biot
         const unsigned int n_active_cells=triangulation.n_active_cells();
         const unsigned int n_dofs=dof_handler.n_dofs();
 
-        double send_buf_num[11] = {err.l2_l2_errors[0],
+        double send_buf_num[13] = {err.l2_l2_errors[0],
                                    err.velocity_stress_l2_div_errors[0],
                                    err.l2_l2_errors[1],
                                    err.pressure_disp_l2_midcell_errors[0],
@@ -3309,9 +3345,11 @@ namespace dd_biot
                                    err.linf_l2_errors[2],
                                    err.l2_l2_errors[3],
                                    err.pressure_disp_l2_midcell_errors[1],
-                                   err.l2_l2_errors[4]};
+                                   err.l2_l2_errors[4],
+								   l_int_error_elast,
+								   l_int_error_darcy};
 
-        double send_buf_den[11] = {err.l2_l2_norms[0],
+        double send_buf_den[13] = {err.l2_l2_norms[0],
                                    err.velocity_stress_l2_div_norms[0],
                                    err.l2_l2_norms[1],
                                    err.pressure_disp_l2_midcell_norms[0],
@@ -3321,20 +3359,24 @@ namespace dd_biot
                                    0,
                                    err.l2_l2_norms[3],
                                    err.pressure_disp_l2_midcell_norms[1],
-                                   err.l2_l2_norms[4]};
+                                   err.l2_l2_norms[4],
+								   l_int_norm_elast,
+								   l_int_norm_darcy};
 
-        double recv_buf_num[11] = {0,0,0,0,0,0,0,0,0,0,0};
-        double recv_buf_den[11] = {0,0,0,0,0,0,0,0,0,0,0};
+        double recv_buf_num[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+        double recv_buf_den[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-        MPI_Reduce(&send_buf_num[0], &recv_buf_num[0], 11, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
-        MPI_Reduce(&send_buf_den[0], &recv_buf_den[0], 11, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
+        MPI_Reduce(&send_buf_num[0], &recv_buf_num[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
+        MPI_Reduce(&send_buf_den[0], &recv_buf_den[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
 
         for (unsigned int i=0; i<11; ++i)
-          if (i != 4 && i != 7 && i != 0 && i != 8)
+          if (i != 4 && i != 7 && i != 0 && i != 8 && i != 11 && i != 12)
             recv_buf_num[i] = sqrt(recv_buf_num[i])/sqrt(recv_buf_den[i]);
 //          else
 //            recv_buf_num[i] = recv_buf_num[i];
-
+ //    Calculating the relative error in mortar displacement.
+//        recv_buf_num[11] = recv_buf_num[11]/recv_buf_den[11];
+//        recv_buf_num[12] = recv_buf_num[12]/recv_buf_den[12];
 
         convergence_table.add_value("cycle", cycle);
         if(split_flag==0)
@@ -3359,6 +3401,17 @@ namespace dd_biot
 //        convergence_table.add_value("Displ,L2-L2mid", recv_buf_num[9]);
 
 //        convergence_table.add_value("Rotat,L2-L2", recv_buf_num[10]);
+        if (mortar_flag)
+        {
+          convergence_table.add_value("Lambda,Elast", recv_buf_num[11]/recv_buf_den[11]);
+          convergence_table.add_value("Lambda,Darcy", recv_buf_num[12]/recv_buf_den[12]);
+          if(split_flag==0)
+          {
+        	double combined_l_int_error =(pow(recv_buf_num[11],2) + pow(recv_buf_num[12],2))/(pow(recv_buf_den[11],2) + pow(recv_buf_den[12],2));
+        	combined_l_int_error = sqrt(combined_l_int_error);
+        	convergence_table.add_value("Lambda,Biot", combined_l_int_error);
+          }
+        }
       }
     }
 
@@ -3537,13 +3590,25 @@ namespace dd_biot
 //        convergence_table.evaluate_convergence_rates("Displ,L2-L2mid", ConvergenceTable::reduction_rate_log2);
 //        convergence_table.evaluate_convergence_rates("Rotat,L2-L2", ConvergenceTable::reduction_rate_log2);
 
-//        if (mortar_flag)
-//        {
-//          convergence_table.set_precision("Lambda,Int", 3);
-//          convergence_table.set_scientific("Lambda,Int", true);
-//          convergence_table.set_tex_caption("Lambda,Int", "$ \\|p - \\lambda_H\\|_{d_H} $");
-//          convergence_table.evaluate_convergence_rates("Lambda,Int", ConvergenceTable::reduction_rate_log2);
-//        }
+        if (mortar_flag)
+        {
+          convergence_table.set_precision("Lambda,Elast", 3);
+          convergence_table.set_scientific("Lambda,Elast", true);
+          convergence_table.set_tex_caption("Lambda,Elast", "$ \\|u - \\lambda_u_H\\|_{d_H} $");
+          convergence_table.evaluate_convergence_rates("Lambda,Elast", ConvergenceTable::reduction_rate_log2);
+
+          convergence_table.set_precision("Lambda,Darcy", 3);
+          convergence_table.set_scientific("Lambda,Darcy", true);
+          convergence_table.set_tex_caption("Lambda,Darcy", "$ \\|p - \\lambda_p_H\\|_{d_H} $");
+          convergence_table.evaluate_convergence_rates("Lambda,Darcy", ConvergenceTable::reduction_rate_log2);
+
+          if(split_flag==0){
+        	  convergence_table.set_precision("Lambda,Biot", 3);
+        	  convergence_table.set_scientific("Lambda,Biot", true);
+        	  convergence_table.set_tex_caption("Lambda,Biot", "$ \\|(u,p) - \\lambda_H\\|_{d_H} $");
+        	  convergence_table.evaluate_convergence_rates("Lambda,Biot", ConvergenceTable::reduction_rate_log2);
+          }
+        }
 
         std::ofstream error_table_file("error" + std::to_string(Utilities::MPI::n_mpi_processes(mpi_communicator)) + "domains.tex");
 
@@ -3628,7 +3693,10 @@ namespace dd_biot
                 }
 
                 if (mortar_flag)
+                {
                     GridGenerator::subdivided_hyper_rectangle(triangulation_mortar, reps[n_processes], p1, p2);
+                    pcout << "Mortar mesh has " << triangulation_mortar.n_active_cells() << " cells" << std::endl;
+                }
 
 
             }
