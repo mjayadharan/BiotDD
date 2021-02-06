@@ -3370,7 +3370,7 @@ namespace dd_biot
         MPI_Reduce(&send_buf_den[0], &recv_buf_den[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
 
         for (unsigned int i=0; i<11; ++i)
-          if (i != 4 && i != 7 && i != 0 && i != 8)
+          if (i != 4 && i != 7 && i != 0 && i != 8 && i != 11 && i != 12)
             recv_buf_num[i] = sqrt(recv_buf_num[i])/sqrt(recv_buf_den[i]);
 //          else
 //            recv_buf_num[i] = recv_buf_num[i];
