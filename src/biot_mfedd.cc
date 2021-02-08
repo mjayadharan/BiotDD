@@ -2161,17 +2161,17 @@ namespace dd_biot
 //                		if (true)
 								{
 								r[side][i] = -(get_normal_direction(side) *
-											   solution_bar[interface_dofs[side][i]]) -
-											   get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+											   solution_bar[interface_dofs[side][i]]);
+//											   - get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
 								}
 							else
 							{
 								r[side][i] = prm.time_step*get_normal_direction(side) *
-											   solution_bar[interface_dofs[side][i]] -
-											   get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+											   solution_bar[interface_dofs[side][i]];
+//															- get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
 //								r[side][i] = get_normal_direction(side) *
-//											   solution_bar[interface_dofs[side][i]] -
-//											   get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+//											   solution_bar[interface_dofs[side][i]];
+////													- get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
 							}
 						}
 
@@ -2403,6 +2403,7 @@ namespace dd_biot
                     //combining summing h[i] over all subdomains
                     std::vector<double> h_buffer(k_counter+2,0);
 
+
                     /* norm adjustments happened here */
                     if (n_processes !=2 )
                     {
@@ -2415,6 +2416,8 @@ namespace dd_biot
 
                 	h=h_buffer;
                     }
+                    /* end of over counting part */
+
                 	for (unsigned int side = 0; side < n_faces_per_cell; ++side)
                 		if (neighbors[side] >= 0)
                 			for(unsigned int i=0; i<=k_counter; ++i)
@@ -2436,10 +2439,15 @@ namespace dd_biot
                 						MPI_SUM,
                 						mpi_communicator);
                 	h[k_counter+1]=sqrt(h_k_buffer);
+
+                	/* Taking care of overcounting by mpiallreduce */
+
                 	if (n_processes == 2)
                 	{
                 		h[k_counter+1] = sqrt(h_dummy);
                 	}
+
+                	/* end of fixing mpiallreduce overcounting */
 
 
                 	for (unsigned int side = 0; side < n_faces_per_cell; ++side)
@@ -2479,9 +2487,9 @@ namespace dd_biot
 //                    << " iterations completed, (residual = " << combined_error_iter
 //                    << ")..." << std::flush;
               // Exit criterion
-              if (combined_error_iter/e_all_iter[0] < tolerance)
+              if (combined_error_iter < tolerance)
                 {
-                  pcout << "\n  GMRES converges in " << cg_iteration << " iterations!\n and residual is"<<combined_error_iter/e_all_iter[0]<<"\n";
+                  pcout << "\n  GMRES converges in " << cg_iteration << " iterations!\n and residual is"<<combined_error_iter<<"\n";
                   Alambda_guess = Ap;
                   lambda_guess = lambda;
                   break;
@@ -2660,8 +2668,7 @@ namespace dd_biot
             // Right now it is effectively solution_bar - A\lambda (0)
               for (unsigned int i = 0; i < interface_dofs_elast[side].size(); ++i){
                 r[side][i] = get_normal_direction(side) *
-                               solution_bar_elast[interface_dofs_elast[side][i]] -
-                             get_normal_direction(side) * solution_star_elast[interface_dofs_elast[side][i]];
+                               solution_bar_elast[interface_dofs_elast[side][i]] - get_normal_direction(side) * solution_star_elast[interface_dofs_elast[side][i]];
               }
 
 
