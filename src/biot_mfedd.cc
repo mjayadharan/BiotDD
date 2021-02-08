@@ -2147,7 +2147,7 @@ namespace dd_biot
                 Q_side[side].resize(temp_array_size+1,q[side]);
 
 
-                // Right now it is effectively solution_bar - A\lambda (0)
+                // Right now it is effectively solution_bar - A\lambda (0) (need change here: change in sign for velocity.n)
                 if(mortar_flag)
                 	for (unsigned int i=0;i<interface_dofs[side].size();++i){
                 	                      r[side][i] = get_normal_direction(side) * solution_bar_mortar[interface_dofs[side][i]]
@@ -2156,9 +2156,21 @@ namespace dd_biot
                 	}
                 else
                 	for (unsigned int i = 0; i < interface_dofs[side].size(); ++i)
-						r[side][i] = get_normal_direction(side) *
-									   solution_bar[interface_dofs[side][i]] -
-									   get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+						{
+							if (interface_dofs[side][i]<n_stress)
+//                		if (true)
+								{
+								r[side][i] = get_normal_direction(side) *
+											   solution_bar[interface_dofs[side][i]] -
+											   get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+								}
+							else
+							{
+								r[side][i] = prm.time_step*get_normal_direction(side) *
+											   solution_bar[interface_dofs[side][i]] -
+											   get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+							}
+						}
 
 
 
@@ -2254,7 +2266,6 @@ namespace dd_biot
             	  if (neighbors[side] >= 0)
             		  interface_data[side]=Q_side[side][k_counter];
 
-
               if (mortar_flag == 1)
               {
                   for (unsigned int side=0;side<n_faces_per_cell;++side)
@@ -2325,13 +2336,21 @@ namespace dd_biot
                 if (neighbors[side] >= 0)
                   {
 
-                    // Create vector of u\dot n to send
+                    // Create vector of u\dot n to send  ( need change : add delta_t to the velocity.n terms)
                     if (mortar_flag)
                         for (unsigned int i=0; i<interface_dofs[side].size(); ++i)
                             interface_data_send[side][i] = get_normal_direction(side) * solution_star_mortar[interface_dofs[side][i]];
                     else
                         for (unsigned int i=0; i<interface_dofs[side].size(); ++i)
-                            interface_data_send[side][i] = get_normal_direction(side) * solution_star[interface_dofs[side][i]];
+//                        	if(true)
+                        	if (interface_dofs[side][i] < n_stress)
+                        	{
+                        		interface_data_send[side][i] = get_normal_direction(side) * solution_star[interface_dofs[side][i]];
+                        	}
+                        	else
+                        	{
+                        		interface_data_send[side][i] = prm.time_step * get_normal_direction(side) * solution_star[interface_dofs[side][i]];
+                        	}
 
                     MPI_Send(&interface_data_send[side][0],
                              interface_dofs[side].size(),
