@@ -2160,8 +2160,8 @@ namespace dd_biot
 							if (interface_dofs[side][i]<n_stress)
 //                		if (true)
 								{
-								r[side][i] = get_normal_direction(side) *
-											   solution_bar[interface_dofs[side][i]] -
+								r[side][i] = -(get_normal_direction(side) *
+											   solution_bar[interface_dofs[side][i]]) -
 											   get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
 								}
 							else
@@ -2169,6 +2169,9 @@ namespace dd_biot
 								r[side][i] = prm.time_step*get_normal_direction(side) *
 											   solution_bar[interface_dofs[side][i]] -
 											   get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+//								r[side][i] = get_normal_direction(side) *
+//											   solution_bar[interface_dofs[side][i]] -
+//											   get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
 							}
 						}
 
@@ -2211,7 +2214,12 @@ namespace dd_biot
     			  MPI_DOUBLE,
     			  MPI_SUM,
                   mpi_communicator);
+          if (n_processes == 2)
+          {
+        	  r_norm_buffer = r_norm;
+          }
           r_norm = sqrt(r_norm_buffer);
+
           //end -----------of calclatig r-norm------------------
 
           //Making the first element of matrix Q[side] same as r_side[side/r_norm
@@ -2349,7 +2357,8 @@ namespace dd_biot
                         	}
                         	else
                         	{
-                        		interface_data_send[side][i] = prm.time_step * get_normal_direction(side) * solution_star[interface_dofs[side][i]];
+                        		interface_data_send[side][i] = -prm.time_step * get_normal_direction(side) * solution_star[interface_dofs[side][i]];
+//                        		interface_data_send[side][i] = - get_normal_direction(side) * solution_star[interface_dofs[side][i]];
                         	}
 
                     MPI_Send(&interface_data_send[side][0],
@@ -2369,7 +2378,7 @@ namespace dd_biot
                     // Compute Ap and with it compute alpha
                     for (unsigned int i = 0; i < interface_dofs[side].size(); ++i)
                       {
-                        Ap[side][i] = -(interface_data_send[side][i] +
+                        Ap[side][i] = (interface_data_send[side][i] +
                                         interface_data_receive[side][i]);
 
 
@@ -2394,6 +2403,9 @@ namespace dd_biot
                     //combining summing h[i] over all subdomains
                     std::vector<double> h_buffer(k_counter+2,0);
 
+                    /* norm adjustments happened here */
+                    if (n_processes !=2 )
+                    {
                 	MPI_Allreduce(&h[0],
                 			&h_buffer[0],
     						k_counter+2,
@@ -2402,6 +2414,7 @@ namespace dd_biot
     						mpi_communicator);
 
                 	h=h_buffer;
+                    }
                 	for (unsigned int side = 0; side < n_faces_per_cell; ++side)
                 		if (neighbors[side] >= 0)
                 			for(unsigned int i=0; i<=k_counter; ++i)
@@ -2423,6 +2436,10 @@ namespace dd_biot
                 						MPI_SUM,
                 						mpi_communicator);
                 	h[k_counter+1]=sqrt(h_k_buffer);
+                	if (n_processes == 2)
+                	{
+                		h[k_counter+1] = sqrt(h_dummy);
+                	}
 
 
                 	for (unsigned int side = 0; side < n_faces_per_cell; ++side)
