@@ -32,8 +32,8 @@ int main (int argc, char *argv[])
         double alpha=1;
         int num_cycle=4;
         int max_itr=2000;
-        double tolerence = 1.e-12;
-        BiotParameters bparam (0.1,5,c0,alpha);
+        double tolerence = 1.e-10;
+        BiotParameters bparam (0.01,3,c0,alpha);
 
 //        //BiotDD without mortar
 //        MixedBiotProblemDD<2> drained_split(1, bparam,0,0,1);

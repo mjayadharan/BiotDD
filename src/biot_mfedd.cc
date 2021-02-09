@@ -2161,14 +2161,14 @@ namespace dd_biot
 //                		if (true)
 								{
 								r[side][i] = -(get_normal_direction(side) *
-											   solution_bar[interface_dofs[side][i]]);
-//											   - get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+											   solution_bar[interface_dofs[side][i]])
+											   - get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
 								}
 							else
 							{
 								r[side][i] = prm.time_step*get_normal_direction(side) *
-											   solution_bar[interface_dofs[side][i]];
-//															- get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+											   solution_bar[interface_dofs[side][i]]
+															- prm.time_step* get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
 //								r[side][i] = get_normal_direction(side) *
 //											   solution_bar[interface_dofs[side][i]];
 ////													- get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
@@ -2206,7 +2206,7 @@ namespace dd_biot
           double r_norm =0;
           for(unsigned int side=0; side<n_faces_per_cell;++side)
         	  if (neighbors[side] >= 0)
-        		  r_norm+=r_norm_side[side]*r_norm_side[side];
+        		  r_norm += (r_norm_side[side]*r_norm_side[side]); //dividing by 2 to prevent overcounting after mpiallreduce
           double r_norm_buffer =0;
           MPI_Allreduce(&r_norm,
         		  &r_norm_buffer,
@@ -2406,6 +2406,7 @@ namespace dd_biot
 
                     /* norm adjustments happened here */
                     if (n_processes !=2 )
+//                    if (false)
                     {
                 	MPI_Allreduce(&h[0],
                 			&h_buffer[0],
@@ -2429,7 +2430,7 @@ namespace dd_biot
                 	//calculating h(k+1)=norm(q) as summation over side,subdomains norm_squared(q[side])
                 	for (unsigned int side = 0; side < n_faces_per_cell; ++side)
                 	            		if (neighbors[side] >= 0)
-                	            			h_dummy+=vect_norm(q[side])*vect_norm(q[side]);
+                	            			h_dummy += pow(vect_norm(q[side]),2);
                 	double h_k_buffer=0;
 
                 	MPI_Allreduce(&h_dummy,
