@@ -148,7 +148,8 @@ namespace dd_biot
 
         void
         local_gmres(const unsigned int maxiter);
-        double vect_norm(std::vector<double> v);
+        double vect_norm(const std::vector<double> &v);
+        double int_op_norm(const std::vector<std::vector<double>> &vect_vect, int side);
         //just to test the local_gmres algorithm
           void
       	testing_gmres(const unsigned int &maxiter);

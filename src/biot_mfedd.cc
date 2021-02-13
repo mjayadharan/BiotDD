@@ -1936,7 +1936,7 @@ namespace dd_biot
       //finding the l2 norm of a std::vector<double> vector
       template <int dim>
       double
-	  MixedBiotProblemDD<dim>::vect_norm(std::vector<double> v){
+	  MixedBiotProblemDD<dim>::vect_norm(const std::vector<double> &v){
       	double result = 0;
       	for(unsigned int i=0; i<v.size(); ++i){
       		result+= v[i]*v[i];
@@ -1944,6 +1944,30 @@ namespace dd_biot
       	return sqrt(result);
 
       }
+
+//      finding the modified-l2 norm of  std::vector<double> using an inner product coming
+//      from the operator defintiion. Same as l2 norm, except a delta_t is multiplied to components
+//      corresponding to the velocity.n . int side gives which interface we are looking at
+      template<int dim>
+      double MixedBiotProblemDD<dim>::int_op_norm(const std::vector<std::vector<double>> &vect_vect, int side)
+	  {
+    	  double result = 0;
+    	  for (unsigned int i=0; i<vect_vect[side].size(); i++)
+    	  {
+//    		  result += (interface_dofs[side][i]<n_stress)?  pow(vect_vect[side][i],2) : prm.time_step*pow(vect_vect[side][i],2);
+    		  if (interface_dofs[side][i]<n_stress)
+    		  {
+    			  result += pow(vect_vect[side][i],2);
+    		  }
+    		  else
+    		  {
+    			  result += prm.time_step*pow(vect_vect[side][i],2);
+    		  }
+    	  }
+    	  return sqrt(result);
+
+	  }
+
       //Calculating the given rotation matrix
       template <int dim>
       void
@@ -2170,8 +2194,8 @@ namespace dd_biot
 											   solution_bar[interface_dofs[side][i]]
 															- prm.time_step* get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
 //								r[side][i] = get_normal_direction(side) *
-//											   solution_bar[interface_dofs[side][i]];
-////													- get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+//											   solution_bar[interface_dofs[side][i]]
+//													- get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
 							}
 						}
 
@@ -2196,6 +2220,7 @@ namespace dd_biot
                     r[side][i] += r_receive_buffer[i];
                   }
                 r_norm_side[side] = vect_norm(r[side]);
+//                r_norm_side[side] = int_op_norm(r,side);
 
 
 
@@ -2430,7 +2455,11 @@ namespace dd_biot
                 	//calculating h(k+1)=norm(q) as summation over side,subdomains norm_squared(q[side])
                 	for (unsigned int side = 0; side < n_faces_per_cell; ++side)
                 	            		if (neighbors[side] >= 0)
+                	            		{
                 	            			h_dummy += pow(vect_norm(q[side]),2);
+//                	            			h_dummy += pow(int_op_norm(q,side),2);
+                	            		}
+
                 	double h_k_buffer=0;
 
                 	MPI_Allreduce(&h_dummy,
