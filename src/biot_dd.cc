@@ -50,7 +50,7 @@ int main (int argc, char *argv[])
 //        MixedBiotProblemDD<2> cubic_mortar(1,bparam,1,3,0);
 
 
-        lin_mortar.run(num_cycle,mesh_m2d,tolerence,max_itr);
+//        lin_mortar.run(num_cycle,mesh_m2d,tolerence,max_itr);
 //        quad_mortar.run(num_cycle,mesh_m2d,tolerence,max_itr);
 //        cubic_mortar.run(num_cycle,mesh_m2d,tolerence,max_itr);
 
