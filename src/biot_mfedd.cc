@@ -1936,7 +1936,7 @@ namespace dd_biot
       //finding the l2 norm of a std::vector<double> vector
       template <int dim>
       double
-	  MixedBiotProblemDD<dim>::vect_norm(std::vector<double> v){
+	  MixedBiotProblemDD<dim>::vect_norm(const std::vector<double> &v){
       	double result = 0;
       	for(unsigned int i=0; i<v.size(); ++i){
       		result+= v[i]*v[i];
@@ -1944,6 +1944,30 @@ namespace dd_biot
       	return sqrt(result);
 
       }
+
+//      finding the modified-l2 norm of  std::vector<double> using an inner product coming
+//      from the operator defintiion. Same as l2 norm, except a delta_t is multiplied to components
+//      corresponding to the velocity.n . int side gives which interface we are looking at
+      template<int dim>
+      double MixedBiotProblemDD<dim>::int_op_norm(const std::vector<std::vector<double>> &vect_vect, int side)
+	  {
+    	  double result = 0;
+    	  for (unsigned int i=0; i<vect_vect[side].size(); i++)
+    	  {
+//    		  result += (interface_dofs[side][i]<n_stress)?  pow(vect_vect[side][i],2) : prm.time_step*pow(vect_vect[side][i],2);
+    		  if (interface_dofs[side][i]<n_stress)
+    		  {
+    			  result += pow(vect_vect[side][i],2);
+    		  }
+    		  else
+    		  {
+    			  result += prm.time_step*pow(vect_vect[side][i],2);
+    		  }
+    	  }
+    	  return sqrt(result);
+
+	  }
+
       //Calculating the given rotation matrix
       template <int dim>
       void
@@ -2075,6 +2099,8 @@ namespace dd_biot
 
           std::vector<std::vector<double>> r(n_faces_per_cell); //to be deleted probably: p?
           std::vector<double> r_norm_side(n_faces_per_cell,0);
+          std::vector<std::vector<double>> r_b(n_faces_per_cell); //RHS
+          std::vector<double> r_b_norm_side(n_faces_per_cell,0);
           std::vector<std::vector<std::vector<double>>>	Q_side(n_faces_per_cell) ;
           std::vector<std::vector<double>>  Ap(n_faces_per_cell);
 
@@ -2142,12 +2168,18 @@ namespace dd_biot
 
                 q[side].resize(interface_dofs[side].size());
                 r[side].resize(interface_dofs[side].size(), 0);
+                if(!mortar_flag)
+                {
+                	r_b[side].resize(interface_dofs[side].size(), 0);
+
+                }
+                std::vector<double> r_b_receive_buffer(r[side].size());
                 std::vector<double> r_receive_buffer(r[side].size());
                 //temporarily fixing a size for Q_side matrix
                 Q_side[side].resize(temp_array_size+1,q[side]);
 
 
-                // Right now it is effectively solution_bar - A\lambda (0)
+                // Right now it is effectively solution_bar - A\lambda (0) (need change here: change in sign for velocity.n)
                 if(mortar_flag)
                 	for (unsigned int i=0;i<interface_dofs[side].size();++i){
                 	                      r[side][i] = get_normal_direction(side) * solution_bar_mortar[interface_dofs[side][i]]
@@ -2156,9 +2188,34 @@ namespace dd_biot
                 	}
                 else
                 	for (unsigned int i = 0; i < interface_dofs[side].size(); ++i)
-						r[side][i] = get_normal_direction(side) *
-									   solution_bar[interface_dofs[side][i]] -
-									   get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+						{
+							if (interface_dofs[side][i]<n_stress)
+//                		if (true)
+								{
+								r[side][i] = -(get_normal_direction(side) *
+											   solution_bar[interface_dofs[side][i]])
+											   - get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+
+								r_b[side][i] = -(get_normal_direction(side) *
+																			   solution_bar[interface_dofs[side][i]]);
+								}
+							else
+							{
+//								r[side][i] = prm.time_step*get_normal_direction(side) *
+//											   solution_bar[interface_dofs[side][i]]
+//															- prm.time_step* get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+								r[side][i] = get_normal_direction(side) *
+											   solution_bar[interface_dofs[side][i]]
+															-get_normal_direction(side) *solution_star[interface_dofs[side][i]] ;
+
+//								r_b[side][i] = prm.time_step*get_normal_direction(side) *
+//																			   solution_bar[interface_dofs[side][i]];
+
+								r_b[side][i] = get_normal_direction(side)*solution_bar[interface_dofs[side][i]];
+
+
+							}
+						}
 
 
 
@@ -2175,12 +2232,38 @@ namespace dd_biot
                          neighbors[side],
                          mpi_communicator,
                          &mpi_status);
+                if (!mortar_flag)
+                {
+                    MPI_Send(&r_b[side][0],
+                             r_b[side].size(),
+                             MPI_DOUBLE,
+                             neighbors[side],
+                             this_mpi,
+                             mpi_communicator);
+                    MPI_Recv(&r_b_receive_buffer[0],
+                             r_b_receive_buffer.size(),
+                             MPI_DOUBLE,
+                             neighbors[side],
+                             neighbors[side],
+                             mpi_communicator,
+                             &mpi_status);
+                }
 
                 for (unsigned int i = 0; i < interface_dofs[side].size(); ++i)
                   {
                     r[side][i] += r_receive_buffer[i];
+                    if (!mortar_flag)
+                    {
+                    	r_b[side][i] += r_b_receive_buffer[i];
+                    }
                   }
                 r_norm_side[side] = vect_norm(r[side]);
+//                r_norm_side[side] = int_op_norm(r,side);
+                if (!mortar_flag)
+                {
+                	r_b_norm_side[side] = vect_norm(r_b[side]);
+//                	r_b_norm_side[side] = int_op_norm(r,side);
+                }
 
 
 
@@ -2189,17 +2272,49 @@ namespace dd_biot
 
           //Calculating r-norm(same as b-norm)-----
           double r_norm =0;
+          double b_norm = 0;
           for(unsigned int side=0; side<n_faces_per_cell;++side)
         	  if (neighbors[side] >= 0)
-        		  r_norm+=r_norm_side[side]*r_norm_side[side];
+        	  {
+        		  r_norm += (r_norm_side[side]*r_norm_side[side]); //dividing by 2 to prevent overcounting after mpiallreduce
+        		  if (!mortar_flag)
+        		  {
+        			  b_norm += pow(r_b_norm_side[side],2);
+        		  }
+        	  }
           double r_norm_buffer =0;
+          double b_norm_buffer = 0;
           MPI_Allreduce(&r_norm,
         		  &r_norm_buffer,
     			  1,
     			  MPI_DOUBLE,
     			  MPI_SUM,
                   mpi_communicator);
+          if (!mortar_flag)
+          {
+        	  MPI_Allreduce(&b_norm,
+        	          		  &b_norm_buffer,
+        	      			  1,
+        	      			  MPI_DOUBLE,
+        	      			  MPI_SUM,
+        	                    mpi_communicator);
+          }
+          if (n_processes == 2)
+          {
+        	  r_norm_buffer = r_norm;
+        	  if (!mortar_flag)
+        	  {
+        		  b_norm_buffer = sqrt(b_norm);
+
+        	  }
+          }
           r_norm = sqrt(r_norm_buffer);
+          if (!mortar_flag)
+          {
+        	  b_norm = sqrt(b_norm_buffer);
+          }
+
+
           //end -----------of calclatig r-norm------------------
 
           //Making the first element of matrix Q[side] same as r_side[side/r_norm
@@ -2217,6 +2332,10 @@ namespace dd_biot
 //          e_all_iter.push_back(1.0);
           e_all_iter[0]=r_norm;
           pcout<<"\n\n r_norm is \n\n"<<r_norm<<"\n\n";
+          if (!mortar_flag)
+          {
+        	  pcout<<"\n b_norm is\n"<<b_norm<<"\n\n";
+          }
 //          Beta.push_back(r_norm);
           Beta[0]=r_norm;
 
@@ -2254,7 +2373,6 @@ namespace dd_biot
             	  if (neighbors[side] >= 0)
             		  interface_data[side]=Q_side[side][k_counter];
 
-
               if (mortar_flag == 1)
               {
                   for (unsigned int side=0;side<n_faces_per_cell;++side)
@@ -2291,9 +2409,23 @@ namespace dd_biot
               }
               else
               {
+//            	  std::ofstream lambda_p_tracker("lambda_p.txt",std::ofstream::app);
+//            	  if(this_mpi == 0)
+//            		  lambda_p_tracker<<"\n\n gmres iteration #: "<<cg_iteration<<"\n----------------------------------\n"<<std::endl;
+
                   for (unsigned int side=0; side<n_faces_per_cell; ++side)
+                  {
+//                	  if (this_mpi == 0)
+//                		  lambda_p_tracker<<"\n side= "<<side<<std::endl;
                       for (unsigned int i=0; i<interface_dofs[side].size(); ++i)
+                      {
                           interface_fe_function[interface_dofs[side][i]] = interface_data[side][i];
+//                          if (interface_dofs[side][i]>n_stress and this_mpi == 0)
+//                          {
+//                        	  lambda_p_tracker<<interface_fe_function[interface_dofs[side][i]]<<", ";
+//                          }
+                      }
+                  }
 
                   interface_fe_function.block(2) = 0;
                   assemble_rhs_star(fe_face_values);
@@ -2325,13 +2457,22 @@ namespace dd_biot
                 if (neighbors[side] >= 0)
                   {
 
-                    // Create vector of u\dot n to send
+                    // Create vector of u\dot n to send  ( need change : add delta_t to the velocity.n terms)
                     if (mortar_flag)
                         for (unsigned int i=0; i<interface_dofs[side].size(); ++i)
                             interface_data_send[side][i] = get_normal_direction(side) * solution_star_mortar[interface_dofs[side][i]];
                     else
                         for (unsigned int i=0; i<interface_dofs[side].size(); ++i)
-                            interface_data_send[side][i] = get_normal_direction(side) * solution_star[interface_dofs[side][i]];
+//                        	if(true)
+                        	if (interface_dofs[side][i] < n_stress)
+                        	{
+                        		interface_data_send[side][i] = get_normal_direction(side) * solution_star[interface_dofs[side][i]];
+                        	}
+                        	else
+                        	{
+//                        		interface_data_send[side][i] = -prm.time_step * get_normal_direction(side) * solution_star[interface_dofs[side][i]];
+                        		interface_data_send[side][i] = - get_normal_direction(side) * solution_star[interface_dofs[side][i]];
+                        	}
 
                     MPI_Send(&interface_data_send[side][0],
                              interface_dofs[side].size(),
@@ -2350,7 +2491,7 @@ namespace dd_biot
                     // Compute Ap and with it compute alpha
                     for (unsigned int i = 0; i < interface_dofs[side].size(); ++i)
                       {
-                        Ap[side][i] = -(interface_data_send[side][i] +
+                        Ap[side][i] = (interface_data_send[side][i] +
                                         interface_data_receive[side][i]);
 
 
@@ -2375,6 +2516,11 @@ namespace dd_biot
                     //combining summing h[i] over all subdomains
                     std::vector<double> h_buffer(k_counter+2,0);
 
+
+                    /* norm adjustments happened here */
+                    if (n_processes !=2 )
+//                    if (false)
+                    {
                 	MPI_Allreduce(&h[0],
                 			&h_buffer[0],
     						k_counter+2,
@@ -2383,6 +2529,9 @@ namespace dd_biot
     						mpi_communicator);
 
                 	h=h_buffer;
+                    }
+                    /* end of over counting part */
+
                 	for (unsigned int side = 0; side < n_faces_per_cell; ++side)
                 		if (neighbors[side] >= 0)
                 			for(unsigned int i=0; i<=k_counter; ++i)
@@ -2394,7 +2543,11 @@ namespace dd_biot
                 	//calculating h(k+1)=norm(q) as summation over side,subdomains norm_squared(q[side])
                 	for (unsigned int side = 0; side < n_faces_per_cell; ++side)
                 	            		if (neighbors[side] >= 0)
-                	            			h_dummy+=vect_norm(q[side])*vect_norm(q[side]);
+                	            		{
+                	            			h_dummy += pow(vect_norm(q[side]),2);
+//                	            			h_dummy += pow(int_op_norm(q,side),2);
+                	            		}
+
                 	double h_k_buffer=0;
 
                 	MPI_Allreduce(&h_dummy,
@@ -2404,6 +2557,15 @@ namespace dd_biot
                 						MPI_SUM,
                 						mpi_communicator);
                 	h[k_counter+1]=sqrt(h_k_buffer);
+
+                	/* Taking care of overcounting by mpiallreduce */
+
+                	if (n_processes == 2)
+                	{
+                		h[k_counter+1] = sqrt(h_dummy);
+                	}
+
+                	/* end of fixing mpiallreduce overcounting */
 
 
                 	for (unsigned int side = 0; side < n_faces_per_cell; ++side)
@@ -2429,7 +2591,9 @@ namespace dd_biot
               Beta[k_counter]*=cs[k_counter];
 
               //Combining error at kth iteration
-              combined_error_iter=fabs(Beta[k_counter+1])/r_norm;
+//              combined_error_iter=fabs(Beta[k_counter+1])/r_norm;
+              combined_error_iter=fabs(Beta[k_counter+1])/b_norm;
+
 
 
               //saving the combined error at each iteration
@@ -2443,9 +2607,9 @@ namespace dd_biot
 //                    << " iterations completed, (residual = " << combined_error_iter
 //                    << ")..." << std::flush;
               // Exit criterion
-              if (combined_error_iter/e_all_iter[0] < tolerance)
+              if (combined_error_iter < tolerance)
                 {
-                  pcout << "\n  GMRES converges in " << cg_iteration << " iterations!\n and residual is"<<combined_error_iter/e_all_iter[0]<<"\n";
+                  pcout << "\n  GMRES converges in " << cg_iteration << " iterations!\n and residual is"<<combined_error_iter<<"\n";
                   Alambda_guess = Ap;
                   lambda_guess = lambda;
                   break;
@@ -2624,8 +2788,7 @@ namespace dd_biot
             // Right now it is effectively solution_bar - A\lambda (0)
               for (unsigned int i = 0; i < interface_dofs_elast[side].size(); ++i){
                 r[side][i] = get_normal_direction(side) *
-                               solution_bar_elast[interface_dofs_elast[side][i]] -
-                             get_normal_direction(side) * solution_star_elast[interface_dofs_elast[side][i]];
+                               solution_bar_elast[interface_dofs_elast[side][i]] - get_normal_direction(side) * solution_star_elast[interface_dofs_elast[side][i]];
               }
 
 
@@ -3766,7 +3929,17 @@ namespace dd_biot
             		get_interface_dofs_elast();
             		get_interface_dofs_darcy();
             	}
-
+//            std::ofstream interface_dofs_file("interface_file.txt");
+//            interface_dofs_file<<"refinement number is "<<cycle<<std::endl;
+//            interface_dofs_file<<"number of stress, velocity dofs"<<n_stress<<",...,"<<n_stress+n_rot+n_disp<<std::endl;
+//            for (auto el: interface_dofs)
+//            {
+//            	for (auto el2: el)
+//            	{
+//            		interface_dofs_file<<el2<<",";
+//            	}
+//            	interface_dofs_file<<"\n";
+//            }
 
             for(unsigned int i=0; i<prm.num_time_steps; i++)
             {

@@ -31,23 +31,24 @@ int main (int argc, char *argv[])
         double c0=1;
         double alpha=1;
         int num_cycle=3;
-        int max_itr=500;
-        double tolerence = 1.e-12;
-        BiotParameters bparam (0.001,2,c0,alpha);
+        int max_itr=1000;
+        double tolerence = 1.e-10;
+        BiotParameters bparam (0.01,3,c0,alpha);
 
 //        //BiotDD without mortar
 //        MixedBiotProblemDD<2> drained_split(1, bparam,0,0,1);
 //        MixedBiotProblemDD<2> fixed_stress(1,bparam,0,0,2);
-//        MixedBiotProblemDD<2> monolithic(1,bparam,0,0,0);
+        MixedBiotProblemDD<2> monolithic(1,bparam,0,0,0);
 
 //        drained_split.run (num_cycle, mesh_m2d, tolerence, max_itr);
 //        fixed_stress.run(num_cycle, mesh_m2d, tolerence, max_itr);
-//        monolithic.run (num_cycle, mesh_m2d, tolerence, max_itr);
+        monolithic.run (num_cycle, mesh_m2d, tolerence, max_itr);
 
      //BiotDD with mortar
-        MixedBiotProblemDD<2> lin_mortar(1,bparam,1,1,0);
-        MixedBiotProblemDD<2> quad_mortar(1,bparam,1,2,0);
-        MixedBiotProblemDD<2> cubic_mortar(1,bparam,1,3,0);
+//        MixedBiotProblemDD<2> lin_mortar(1,bparam,1,1,0);
+//        MixedBiotProblemDD<2> quad_mortar(1,bparam,1,2,0);
+//        MixedBiotProblemDD<2> cubic_mortar(1,bparam,1,3,0);
+
 
         lin_mortar.run(num_cycle,mesh_m2d,tolerence,max_itr);
 //        quad_mortar.run(num_cycle,mesh_m2d,tolerence,max_itr);
