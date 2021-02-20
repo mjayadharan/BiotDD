@@ -123,8 +123,7 @@ namespace dd_biot
             virtual void vector_value (const Point<dim> &p,
                                        Vector<double>   &values) const;
 
-            virtual void vector_value_list (const std::vector<Point<dim> >   &points,
-            std::vector<Vector<double> > &value_list) const;
+            virtual void vector_value_list (const std::vector<Point<dim> > &points, std::vector<Vector<double> > &value_list) const;
     };
 
     template <int dim>
@@ -232,10 +231,12 @@ namespace dd_biot
     public:
         DisplacementBoundaryValues() : Function<dim>(dim) {}
 
-        virtual void vector_value (const Point<dim> &p,
-                                   Vector<double>   &values) const;
-        virtual void vector_value_list (const std::vector<Point<dim> >   &points,
-        std::vector<Vector<double> > &value_list) const;
+        virtual void vector_value (const Point<dim> &p, Vector<double>   &values) const;
+
+        virtual void vector_value_list (const std::vector<Point<dim> > &points, std::vector<Vector<double> > &value_list) const;
+
+        virtual void der_vector_value (const Point<dim> &p, Vector<double>   &values) const;
+        virtual void der_vector_value_list (const std::vector<Point<dim> > &points, std::vector<Vector<double> > &value_list) const;
     };
 
     template <int dim>
@@ -284,6 +285,54 @@ namespace dd_biot
 
         for (unsigned int p=0; p<n_points; ++p)
             DisplacementBoundaryValues<dim>::vector_value(points[p], value_list[p]);
+    }
+
+    template <int dim>
+    void DisplacementBoundaryValues<dim>::der_vector_value (const Point<dim> &p,
+                                                        Vector<double>   &values) const
+    {
+        double x = p[0];
+        double y = p[1];
+        double z;
+
+        if (dim == 3)
+            z = p[2];
+
+        const LameParameters<dim> lame_function;
+        Vector<double> vec(2);
+        lame_function.vector_value(p,vec);
+
+        const double lmbda = vec[0];
+        const double mu = vec[1];
+        double t = FunctionTime<double>::get_time();
+
+        switch (dim)
+        {
+            case 2:
+                values(0) = exp(t)*((x*x*x)*(y*y*y*y)+cos(y-1.0)*sin((x-1.0)*(y-1.0))+x*x);
+                values(1) = exp(t)*(pow(y-1.0,2.0)-pow(x-1.0,4.0)*pow(y-1.0,3.0)+cos(x*y)*sin(x));
+                break;
+            case 3:
+                values(0) = -sin(M_PI*y)*sin(M_PI*z)*(exp(x)*(1.0/1.0E1)-1.0/1.0E1);
+                values(1) = -(exp(x)-1.0)*(y-cos(M_PI/12.0)*(y-1.0/2.0)+sin(M_PI/12.0)*(z-1.0/2.0)-1.0/2.0);
+                values(2) = (exp(x)-1.0)*(-z+cos(M_PI/12.0)*(z-1.0/2.0)+sin(M_PI/12.0)*(y-1.0/2.0)+1.0/2.0);
+                break;
+            default:
+                Assert(false, ExcNotImplemented());
+        }
+    }
+
+    template <int dim>
+    void DisplacementBoundaryValues<dim>::der_vector_value_list(const std::vector<Point<dim> > &points,
+    std::vector<Vector<double> >   &value_list) const
+    {
+        Assert(value_list.size() == points.size(),
+               ExcDimensionMismatch(value_list.size(), points.size()));
+
+        const unsigned int n_points = points.size();
+
+        for (unsigned int p=0; p<n_points; ++p)
+            DisplacementBoundaryValues<dim>::der_vector_value(points[p], value_list[p]);
     }
 
     template <int dim>

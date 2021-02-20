@@ -566,9 +566,9 @@ namespace dd_biot
                                                + prm.time_step*div_phi_u[j] * phi_p[i] + prm.c_0*phi_p[i]*phi_p[j] + prm.alpha*trace(asigma)*phi_p[j]  // Momentum
                                                + prm.alpha * prm.alpha * trace(apId)*phi_p[j]
                                                + scalar_product(asigma, sigma) + prm.alpha*scalar_product(apId, sigma)                                 // Mixed elasticity eq-ns
-                                               + scalar_product(phi_d[i], div_phi_s[j])  + scalar_product(phi_d[j], div_phi_s[i])
+                                               + scalar_product(phi_d[i], div_phi_s[j])  + prm.time_step*scalar_product(phi_d[j], div_phi_s[i])
                                                + scalar_product<1, rotation_dim>(phi_r[i], asym_j)
-                                               + scalar_product<1, rotation_dim>(phi_r[j], asym_i) )
+                                               + prm.time_step*scalar_product<1, rotation_dim>(phi_r[j], asym_i) )
                                               * fe_values.JxW(q);
                     }
                 }
@@ -1039,6 +1039,7 @@ namespace dd_biot
 
           std::vector <double>                      phi_p(dofs_per_cell);
           std::vector<Tensor<1,dim> >               phi_d(dofs_per_cell);
+          std::vector<std::vector<Tensor<1,dim>>> phi_s(dofs_per_cell, std::vector<Tensor<1,dim> > (dim));
 
           std::vector<double> old_pressure_values(n_q_points);
           std::vector<std::vector<Tensor<1, dim>>> old_stress(dim, std::vector<Tensor<1,dim>> (n_q_points));
@@ -1059,7 +1060,7 @@ namespace dd_biot
               const double mu = lame_parameters_values[q][1];
               const double lambda = lame_parameters_values[q][0];
 
-              Tensor<2,dim> asigma, apId;
+              Tensor<2,dim> asigma, sigma, apId;
               compliance_tensor<dim>(old_stress_values[q], mu, lambda, asigma);
               compliance_tensor_pressure<dim>(old_pressure_values[q], mu, lambda, apId);
 
@@ -1069,14 +1070,22 @@ namespace dd_biot
                   phi_p[k] = fe_values[pressure].value (k, q);
                   phi_d[k] = fe_values[displacement].value (k, q);
 
+                  for (unsigned int s_i=0; s_i<dim; ++s_i)
+					{
+					  phi_s[k][s_i] = fe_values[stresses[s_i]].value (k, q);
+					}
+
+
               }
 
               for (unsigned int i=0; i<dofs_per_cell; ++i)
               {
+            	  make_tensor(phi_s[i], sigma);
                   local_rhs(i) += (prm.time_step*phi_p[i] * rhs_values_flow[q]
                                             + prm.c_0*old_pressure_values[q] * phi_p[i]
                                             + prm.alpha * prm.alpha * trace(apId) * phi_p[i]
-                                            + prm.alpha * trace(asigma) * phi_p[i] )
+                                            + prm.alpha * trace(asigma) * phi_p[i]
+											+ scalar_product(asigma, sigma)) //new term added for modifying monolithic formulation
                                            * fe_values.JxW(q);
 
                 for (unsigned d_i=0; d_i<dim; ++d_i)
@@ -1093,9 +1102,16 @@ namespace dd_biot
               if (cell->at_boundary(face_no) && cell->face(face_no)->boundary_id() == 0) // pressure part of the boundary
               {
                   fe_face_values.reinit (cell, face_no);
-
-                  displacement_boundary_values.vector_value_list (fe_face_values.get_quadrature_points(),
+                  if (!split_flag)
+                  {
+                	  displacement_boundary_values.der_vector_value_list (fe_face_values.get_quadrature_points(),
                                                                   boundary_values_elast);
+                  }
+                  else
+                  {
+                	  displacement_boundary_values.vector_value_list (fe_face_values.get_quadrature_points(),
+                	                                                                    boundary_values_elast);
+                  }
                   pressure_boundary_values.value_list(fe_face_values.get_quadrature_points(), boundary_values_flow);
 
                   for (unsigned int q=0; q<n_face_q_points; ++q)
@@ -1111,7 +1127,7 @@ namespace dd_biot
 
                           sigma_n = sigma * fe_face_values.normal_vector(q);
                           for (unsigned int d_i=0; d_i<dim; ++d_i)
-                              local_rhs(i) += ((sigma_n[d_i] * boundary_values_elast[q][d_i])
+                              local_rhs(i) += ((sigma_n[d_i] * prm.time_step* boundary_values_elast[q][d_i])
                                                         * fe_face_values.JxW(q));
                       }
               }
@@ -1521,7 +1537,7 @@ namespace dd_biot
                                 sigma[d_i] = fe_face_values[stresses[d_i]].value (i, q);
 
                             for (unsigned int d_i=0; d_i<dim; ++d_i)
-                                local_rhs(i) += fe_face_values[stresses[d_i]].value (i, q) *
+                                local_rhs(i) += prm.time_step*fe_face_values[stresses[d_i]].value (i, q) *
                                                 fe_face_values.normal_vector(q) *
                                                 interface_values[d_i][q] * get_normal_direction(cell->face(face_n)->boundary_id()-1) *
                                                 fe_face_values.normal_vector(q) *
