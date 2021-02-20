@@ -30,8 +30,8 @@ int main (int argc, char *argv[])
         mesh_m2d[4] = {1,1};
         double c0=1;
         double alpha=1;
-        int num_cycle=4;
-        int max_itr=2000;
+        int num_cycle=3;
+        int max_itr=1000;
         double tolerence = 1.e-10;
         BiotParameters bparam (0.01,3,c0,alpha);
 
