@@ -1085,7 +1085,8 @@ namespace dd_biot
                                             + prm.c_0*old_pressure_values[q] * phi_p[i]
                                             + prm.alpha * prm.alpha * trace(apId) * phi_p[i]
                                             + prm.alpha * trace(asigma) * phi_p[i]
-											+ scalar_product(asigma, sigma)) //new term added for modifying monolithic formulation
+											+ scalar_product(asigma, sigma)
+											+ scalar_product(apId, sigma) ) //new term added for modifying monolithic formulation
                                            * fe_values.JxW(q);
 
                 for (unsigned d_i=0; d_i<dim; ++d_i)
@@ -3962,10 +3963,24 @@ namespace dd_biot
               prm.time += prm.time_step;
 
               solve_timestep (maxiter);
-              compute_errors(cycle);
+
               if(split_flag==2)
             	  older_solution=old_solution;
+              if (!split_flag)
+              {
+//            	  for (unsigned int k=0; k<solution.block(1).size(); k++)
+//            	  {
+//            		  solution.block(1)[k] = old_solution.block(1)[k] + prm.time_step*solution.block(1)[k];
+//            	  }
+//            	  for (unsigned int k=0; k<solution.block(2).size(); k++)
+//				  {
+//					  solution.block(2)[k] = old_solution.block(2)[k] + prm.time_step*solution.block(2)[k];
+//				  }
+//            	  solution.block(1).sadd(prm.time_step, 1.0, old_solution.block(1));  // = old_solution.block(1) + solution.block(1);
+//            	  solution.block(2).sadd(prm.time_step, 1.0, old_solution.block(2));
+              }
               old_solution = solution;
+              compute_errors(cycle);
               output_results (cycle, refine);
               max_cg_iteration=0;
               if(split_flag!=0)
