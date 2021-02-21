@@ -3605,7 +3605,7 @@ namespace dd_biot
         unsigned int this_mpi = Utilities::MPI::this_mpi_process(mpi_communicator);
 
         /* From here disabling for longer runs:
-         */
+
 
       std::vector<std::string> solution_names;
       switch(dim)
@@ -3697,7 +3697,7 @@ namespace dd_biot
                 data_out.write_pvtu_record (master_output, filenames);
               }
 
-     /* end of commenting out for disabling vtu outputs*/
+      end of commenting out for disabling vtu outputs*/
 
 
       double total_time = prm.time_step * prm.num_time_steps;
