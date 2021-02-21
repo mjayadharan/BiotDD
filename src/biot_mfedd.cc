@@ -3976,7 +3976,7 @@ namespace dd_biot
 //				  {
 //					  solution.block(2)[k] = old_solution.block(2)[k] + prm.time_step*solution.block(2)[k];
 //				  }
-//            	  solution.block(1).sadd(prm.time_step, 1.0, old_solution.block(1));  // = old_solution.block(1) + solution.block(1);
+            	  solution.block(1).sadd(prm.time_step, 1.0, old_solution.block(1));  // = old_solution.block(1) + solution.block(1);
 //            	  solution.block(2).sadd(prm.time_step, 1.0, old_solution.block(2));
               }
               old_solution = solution;

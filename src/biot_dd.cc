@@ -30,10 +30,10 @@ int main (int argc, char *argv[])
         mesh_m2d[4] = {1,1};
         double c0=1;
         double alpha=1;
-        int num_cycle=5;
+        int num_cycle=4;
         int max_itr=1000;
-        double tolerence = 1.e-10;
-        BiotParameters bparam (0.01,10,c0,alpha);
+        double tolerence = 1.e-12;
+        BiotParameters bparam (0.01,5,c0,alpha);
 
 //        //BiotDD without mortar
 //        MixedBiotProblemDD<2> drained_split(1, bparam,0,0,1);
