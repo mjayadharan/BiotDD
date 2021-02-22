@@ -3968,16 +3968,8 @@ namespace dd_biot
             	  older_solution=old_solution;
               if (!split_flag)
               {
-//            	  for (unsigned int k=0; k<solution.block(1).size(); k++)
-//            	  {
-//            		  solution.block(1)[k] = old_solution.block(1)[k] + prm.time_step*solution.block(1)[k];
-//            	  }
-//            	  for (unsigned int k=0; k<solution.block(2).size(); k++)
-//				  {
-//					  solution.block(2)[k] = old_solution.block(2)[k] + prm.time_step*solution.block(2)[k];
-//				  }
-            	  solution.block(1).sadd(prm.time_step, 1.0, old_solution.block(1));  // = old_solution.block(1) + solution.block(1);
-//            	  solution.block(2).sadd(prm.time_step, 1.0, old_solution.block(2));
+            	  solution.block(1).sadd(prm.time_step, 1.0, old_solution.block(1));  // recovering displacement soluton from derivative
+//            	  solution.block(2).sadd(prm.time_step, 1.0, old_solution.block(2)); //recovering rotation solution from derivative
               }
               old_solution = solution;
               compute_errors(cycle);
