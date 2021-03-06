@@ -30,9 +30,9 @@ int main (int argc, char *argv[])
         mesh_m2d[4] = {1,1};
         double c0=1;
         double alpha=1;
-        int num_cycle=5;
+        int num_cycle=4;
         int max_itr=1000;
-        double tolerence = 1.e-12;
+        double tolerence = 1.e-10;
         BiotParameters bparam (0.001,100,c0,alpha);
 
 //        //BiotDD without mortar
