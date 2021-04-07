@@ -2966,6 +2966,7 @@ namespace dd_biot
           if (cg_iteration == 1){
             normB = alpha[0];
             normRold = alpha[0];
+            pcout<<"\n initial residual square is: "<<normB<<std::endl;
           }
 
           normRold = alpha[0];
@@ -2983,9 +2984,9 @@ namespace dd_biot
                   beta_side[side] += r[side][i] * r[side][i];
               }
           if(split_order_flag==0){
-//          pcout << "\r  ..." << cg_iteration
-//                << " Elast iterations completed, (Elast residual = " << fabs(alpha[0])
-//                << ")..." << std::flush;
+          pcout << "\r  ..." << cg_iteration
+                << " Elast iterations completed, (Elast relative residual = " << fabs(alpha[0])/normB
+                << ")..." << std::flush;
           // Exit criterion
           if (fabs(alpha[0]) / normB < tolerance )
 //          if (sqrt(alpha[0]/normB<1.e-8) )
@@ -2997,9 +2998,9 @@ namespace dd_biot
             }
           }
           else if(split_order_flag==1){
-//                   pcout << "\r  ..." << cg_iteration
-//                         << " Darcy iterations completed, (Darcy residual = " << fabs(alpha[0])
-//                         << ")..." << std::flush;
+                   pcout << "\r  ..." << cg_iteration
+                         << " Darcy iterations completed, (Darcy relative residual = " << fabs(alpha[0])/normB
+                         << ")..." << std::flush;
                    // Exit criterion
                    if (fabs(alpha[0]) / normB < tolerance )
 //        	  if (sqrt(alpha[0]/normB<1.e-8) )
@@ -3259,299 +3260,299 @@ namespace dd_biot
 
       const unsigned int total_dim = static_cast<unsigned int>(dim*dim + dim + 0.5*dim*(dim-1) + dim + 1);
 
-      const ComponentSelectFunction<dim> stress_mask(std::make_pair(0,dim*dim), total_dim);
-      const ComponentSelectFunction<dim> displacement_mask(std::make_pair(dim*dim,dim*dim+dim), total_dim);
-      const ComponentSelectFunction<dim> rotation_mask(std::make_pair(dim*dim+dim,dim*dim+dim+0.5*dim*(dim-1)), total_dim);
-
-      const ComponentSelectFunction<dim> velocity_mask(std::make_pair(dim*dim+dim+0.5*dim*(dim-1), dim*dim+dim+0.5*dim*(dim-1)+dim), total_dim);
-      const ComponentSelectFunction<dim> pressure_mask(static_cast<unsigned int>(dim*dim+dim+0.5*dim*(dim-1)+dim), total_dim);
-
-      ExactSolution<dim> exact_solution;
-      exact_solution.set_time(prm.time);
-
-      // Vectors to temporarily store cellwise errros
-      Vector<double> cellwise_errors (triangulation.n_active_cells());
-      Vector<double> cellwise_norms (triangulation.n_active_cells());
-
-      // Vectors to temporarily store cellwise componentwise div errors
-      Vector<double> cellwise_div_errors (triangulation.n_active_cells());
-      Vector<double> cellwise_div_norms (triangulation.n_active_cells());
-
-      // Define quadrature points to compute errors at
-      QTrapez<1>      q_trapez;
-      QIterated<dim>  quadrature(q_trapez,degree+2);
-      QGauss<dim>  quadrature_div(5);
-
-      // This is used to show superconvergence at midcells
-      QGauss<dim>   quadrature_super(1);
-
-      // Since we want to compute the relative norm
-      BlockVector<double> zerozeros(1, solution.size());
-
-      // Pressure error and norm
-      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-                                         cellwise_errors, quadrature,
-                                         VectorTools::L2_norm,
-                                         &pressure_mask);
-      const double p_l2_error = cellwise_errors.norm_sqr();
-
-      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-                                         cellwise_norms, quadrature,
-                                         VectorTools::L2_norm,
-                                         &pressure_mask);
-      const double p_l2_norm = cellwise_norms.norm_sqr();
-
-      // L2 in time error
-      err.l2_l2_errors[1] += p_l2_error;
-      err.l2_l2_norms[1] += p_l2_norm;
-
-      // Linf in time error
-      err.linf_l2_errors[1] = std::max(err.linf_l2_errors[1], sqrt(p_l2_error)/sqrt(p_l2_norm));
-      //linf_l2_norms[1] = std::max(linf_l2_norms[1], p_l2_norm*p_l2_norm);
-
-      // Pressure error and norm at midcells
-      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-                                         cellwise_errors, quadrature_super,
-                                         VectorTools::L2_norm,
-                                         &pressure_mask);
-      const double p_l2_mid_error = cellwise_errors.norm_sqr();
-
-      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-                                         cellwise_norms, quadrature_super,
-                                         VectorTools::L2_norm,
-                                         &pressure_mask);
-      const double p_l2_mid_norm = cellwise_norms.norm_sqr();
-
-      // L2 in time error
-      err.pressure_disp_l2_midcell_errors[0] +=p_l2_mid_error;
-      err.pressure_disp_l2_midcell_norms[0] += p_l2_mid_norm;
-
-      // Velocity L2 error and norm
-      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-                                         cellwise_errors, quadrature,
-                                         VectorTools::L2_norm,
-                                         &velocity_mask);
-      double u_l2_error = cellwise_errors.norm_sqr();
-
-      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-                                         cellwise_norms, quadrature,
-                                         VectorTools::L2_norm,
-                                         &velocity_mask);
-
-      double u_l2_norm = cellwise_norms.norm_sqr();
-
-      // following is actually calculating H_div norm for velocity
-//      err.l2_l2_errors[0] +=u_l2_error;
-      err.l2_l2_norms[0] += u_l2_norm;
-      double total_time = prm.time_step * prm.num_time_steps;
-      {
-        // Velocity Hdiv error and seminorm
-        VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-                                           cellwise_errors, quadrature,
-                                           VectorTools::Hdiv_seminorm,
-                                           &velocity_mask);
-        const double u_hd_error = cellwise_errors.norm_sqr();
-
-        VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-                                           cellwise_norms, quadrature,
-                                           VectorTools::Hdiv_seminorm,
-                                           &velocity_mask);
-        const double u_hd_norm = cellwise_norms.norm_sqr();
-
-        //std::cout << u_hd_error << std::endl;
-
-        // L2 in time error
-        //if (std::fabs(time-5*time_step) > 1.0e-12) {
-        err.velocity_stress_l2_div_errors[0] += u_hd_error;
-        err.velocity_stress_l2_div_norms[0] += u_hd_norm;     // put += back!
-        //}
-        u_l2_error+=u_hd_error;
-		u_l2_norm+=u_hd_norm;
-      }
-      err.l2_l2_errors[0] = std::max(err.l2_l2_errors[0],sqrt(u_l2_error)/sqrt(u_l2_norm));
+//      const ComponentSelectFunction<dim> stress_mask(std::make_pair(0,dim*dim), total_dim);
+//      const ComponentSelectFunction<dim> displacement_mask(std::make_pair(dim*dim,dim*dim+dim), total_dim);
+//      const ComponentSelectFunction<dim> rotation_mask(std::make_pair(dim*dim+dim,dim*dim+dim+0.5*dim*(dim-1)), total_dim);
+//
+//      const ComponentSelectFunction<dim> velocity_mask(std::make_pair(dim*dim+dim+0.5*dim*(dim-1), dim*dim+dim+0.5*dim*(dim-1)+dim), total_dim);
+//      const ComponentSelectFunction<dim> pressure_mask(static_cast<unsigned int>(dim*dim+dim+0.5*dim*(dim-1)+dim), total_dim);
+//
+//      ExactSolution<dim> exact_solution;
+//      exact_solution.set_time(prm.time);
+//
+//      // Vectors to temporarily store cellwise errros
+//      Vector<double> cellwise_errors (triangulation.n_active_cells());
+//      Vector<double> cellwise_norms (triangulation.n_active_cells());
+//
+//      // Vectors to temporarily store cellwise componentwise div errors
+//      Vector<double> cellwise_div_errors (triangulation.n_active_cells());
+//      Vector<double> cellwise_div_norms (triangulation.n_active_cells());
+//
+//      // Define quadrature points to compute errors at
+//      QTrapez<1>      q_trapez;
+//      QIterated<dim>  quadrature(q_trapez,degree+2);
+//      QGauss<dim>  quadrature_div(5);
+//
+//      // This is used to show superconvergence at midcells
+//      QGauss<dim>   quadrature_super(1);
+//
+//      // Since we want to compute the relative norm
+//      BlockVector<double> zerozeros(1, solution.size());
+//
+//      // Pressure error and norm
+//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+//                                         cellwise_errors, quadrature,
+//                                         VectorTools::L2_norm,
+//                                         &pressure_mask);
+//      const double p_l2_error = cellwise_errors.norm_sqr();
+//
+//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+//                                         cellwise_norms, quadrature,
+//                                         VectorTools::L2_norm,
+//                                         &pressure_mask);
+//      const double p_l2_norm = cellwise_norms.norm_sqr();
+//
+//      // L2 in time error
+//      err.l2_l2_errors[1] += p_l2_error;
+//      err.l2_l2_norms[1] += p_l2_norm;
+//
+//      // Linf in time error
 //      err.linf_l2_errors[1] = std::max(err.linf_l2_errors[1], sqrt(p_l2_error)/sqrt(p_l2_norm));
-      // Rotation error and norm
-      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-                                         cellwise_errors, quadrature,
-                                         VectorTools::L2_norm,
-                                         &rotation_mask);
-      const double r_l2_error = cellwise_errors.norm_sqr();
-
-      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-                                         cellwise_norms, quadrature,
-                                         VectorTools::L2_norm,
-                                         &rotation_mask);
-      const double r_l2_norm = cellwise_norms.norm_sqr();
-
-      err.l2_l2_errors[4] += r_l2_error;
-      err.l2_l2_norms[4] += r_l2_norm;
-
-      // Displacement error and norm
-      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-                                         cellwise_errors, quadrature,
-                                         VectorTools::L2_norm,
-                                         &displacement_mask);
-      const double d_l2_error = cellwise_errors.norm_sqr();
-
-      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-                                         cellwise_norms, quadrature,
-                                         VectorTools::L2_norm,
-                                         &displacement_mask);
-      const double d_l2_norm = cellwise_norms.norm_sqr();
-
-//      err.l2_l2_errors[3] += d_l2_error;
-      err.l2_l2_errors[3] = std::max(err.l2_l2_errors[3], sqrt(d_l2_error)/sqrt(d_l2_norm));
-      err.l2_l2_norms[3] += d_l2_norm;
-
-      // Displacement error and norm at midcells
-      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-                                         cellwise_errors, quadrature_super,
-                                         VectorTools::L2_norm,
-                                         &displacement_mask);
-      const double d_l2_mid_error = cellwise_errors.norm_sqr();
-
-      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-                                         cellwise_norms, quadrature_super,
-                                         VectorTools::L2_norm,
-                                         &displacement_mask);
-      const double d_l2_mid_norm = cellwise_norms.norm_sqr();
-
-      // L2 in time error
-      err.pressure_disp_l2_midcell_errors[1] += d_l2_mid_error;
-      err.pressure_disp_l2_midcell_norms[1] += d_l2_mid_norm;
-
-      // Stress L2 error and norm
-      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-                                         cellwise_errors, quadrature,
-                                         VectorTools::L2_norm,
-                                         &stress_mask);
-      double s_l2_error = cellwise_errors.norm_sqr();
-
-      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-                                         cellwise_norms, quadrature,
-                                         VectorTools::L2_norm,
-                                         &stress_mask);
-
-      double s_l2_norm = cellwise_norms.norm_sqr();
-
-      // Linf in time error
+//      //linf_l2_norms[1] = std::max(linf_l2_norms[1], p_l2_norm*p_l2_norm);
+//
+//      // Pressure error and norm at midcells
+//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+//                                         cellwise_errors, quadrature_super,
+//                                         VectorTools::L2_norm,
+//                                         &pressure_mask);
+//      const double p_l2_mid_error = cellwise_errors.norm_sqr();
+//
+//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+//                                         cellwise_norms, quadrature_super,
+//                                         VectorTools::L2_norm,
+//                                         &pressure_mask);
+//      const double p_l2_mid_norm = cellwise_norms.norm_sqr();
+//
+//      // L2 in time error
+//      err.pressure_disp_l2_midcell_errors[0] +=p_l2_mid_error;
+//      err.pressure_disp_l2_midcell_norms[0] += p_l2_mid_norm;
+//
+//      // Velocity L2 error and norm
+//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+//                                         cellwise_errors, quadrature,
+//                                         VectorTools::L2_norm,
+//                                         &velocity_mask);
+//      double u_l2_error = cellwise_errors.norm_sqr();
+//
+//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+//                                         cellwise_norms, quadrature,
+//                                         VectorTools::L2_norm,
+//                                         &velocity_mask);
+//
+//      double u_l2_norm = cellwise_norms.norm_sqr();
+//
+//      // following is actually calculating H_div norm for velocity
+////      err.l2_l2_errors[0] +=u_l2_error;
+//      err.l2_l2_norms[0] += u_l2_norm;
+      double total_time = prm.time_step * prm.num_time_steps;
+//      {
+//        // Velocity Hdiv error and seminorm
+//        VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+//                                           cellwise_errors, quadrature,
+//                                           VectorTools::Hdiv_seminorm,
+//                                           &velocity_mask);
+//        const double u_hd_error = cellwise_errors.norm_sqr();
+//
+//        VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+//                                           cellwise_norms, quadrature,
+//                                           VectorTools::Hdiv_seminorm,
+//                                           &velocity_mask);
+//        const double u_hd_norm = cellwise_norms.norm_sqr();
+//
+//        //std::cout << u_hd_error << std::endl;
+//
+//        // L2 in time error
+//        //if (std::fabs(time-5*time_step) > 1.0e-12) {
+//        err.velocity_stress_l2_div_errors[0] += u_hd_error;
+//        err.velocity_stress_l2_div_norms[0] += u_hd_norm;     // put += back!
+//        //}
+//        u_l2_error+=u_hd_error;
+//		u_l2_norm+=u_hd_norm;
+//      }
+//      err.l2_l2_errors[0] = std::max(err.l2_l2_errors[0],sqrt(u_l2_error)/sqrt(u_l2_norm));
+////      err.linf_l2_errors[1] = std::max(err.linf_l2_errors[1], sqrt(p_l2_error)/sqrt(p_l2_norm));
+//      // Rotation error and norm
+//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+//                                         cellwise_errors, quadrature,
+//                                         VectorTools::L2_norm,
+//                                         &rotation_mask);
+//      const double r_l2_error = cellwise_errors.norm_sqr();
+//
+//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+//                                         cellwise_norms, quadrature,
+//                                         VectorTools::L2_norm,
+//                                         &rotation_mask);
+//      const double r_l2_norm = cellwise_norms.norm_sqr();
+//
+//      err.l2_l2_errors[4] += r_l2_error;
+//      err.l2_l2_norms[4] += r_l2_norm;
+//
+//      // Displacement error and norm
+//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+//                                         cellwise_errors, quadrature,
+//                                         VectorTools::L2_norm,
+//                                         &displacement_mask);
+//      const double d_l2_error = cellwise_errors.norm_sqr();
+//
+//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+//                                         cellwise_norms, quadrature,
+//                                         VectorTools::L2_norm,
+//                                         &displacement_mask);
+//      const double d_l2_norm = cellwise_norms.norm_sqr();
+//
+////      err.l2_l2_errors[3] += d_l2_error;
+//      err.l2_l2_errors[3] = std::max(err.l2_l2_errors[3], sqrt(d_l2_error)/sqrt(d_l2_norm));
+//      err.l2_l2_norms[3] += d_l2_norm;
+//
+//      // Displacement error and norm at midcells
+//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+//                                         cellwise_errors, quadrature_super,
+//                                         VectorTools::L2_norm,
+//                                         &displacement_mask);
+//      const double d_l2_mid_error = cellwise_errors.norm_sqr();
+//
+//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+//                                         cellwise_norms, quadrature_super,
+//                                         VectorTools::L2_norm,
+//                                         &displacement_mask);
+//      const double d_l2_mid_norm = cellwise_norms.norm_sqr();
+//
+//      // L2 in time error
+//      err.pressure_disp_l2_midcell_errors[1] += d_l2_mid_error;
+//      err.pressure_disp_l2_midcell_norms[1] += d_l2_mid_norm;
+//
+//      // Stress L2 error and norm
+//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+//                                         cellwise_errors, quadrature,
+//                                         VectorTools::L2_norm,
+//                                         &stress_mask);
+//      double s_l2_error = cellwise_errors.norm_sqr();
+//
+//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+//                                         cellwise_norms, quadrature,
+//                                         VectorTools::L2_norm,
+//                                         &stress_mask);
+//
+//      double s_l2_norm = cellwise_norms.norm_sqr();
+//
+//      // Linf in time error
+////      err.linf_l2_errors[2] = std::max(err.linf_l2_errors[2],sqrt(s_l2_error)/sqrt(s_l2_norm));
+//      //linf_l2_norms[2] = std::max(linf_l2_norms[2],s_l2_norm*s_l2_norm);
+//
+//      err.l2_l2_errors[2] += s_l2_error;
+//      err.l2_l2_norms[2] += s_l2_norm;
+//
+//      // Stress Hdiv seminorm
+//      cellwise_errors = 0;
+//      cellwise_norms = 0;
+//
+//      double s_hd_error = 0;
+//      double s_hd_norm = 0;
+//
+//      for (int i=0; i<dim; ++i){
+//        const ComponentSelectFunction<dim> stress_component_mask (std::make_pair(i*dim,(i+1)*dim), total_dim);
+//
+//        VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+//                                           cellwise_div_errors, quadrature,
+//                                           VectorTools::Hdiv_seminorm,
+//                                           &stress_component_mask);
+//        s_hd_error += cellwise_div_errors.norm_sqr();
+//
+//        VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+//                                           cellwise_div_norms, quadrature,
+//                                           VectorTools::Hdiv_seminorm,
+//                                           &stress_component_mask);
+//        s_hd_norm += cellwise_div_norms.norm_sqr();
+//      }
+//      s_l2_error+= s_hd_error;
+//      s_l2_norm+= s_hd_norm;
 //      err.linf_l2_errors[2] = std::max(err.linf_l2_errors[2],sqrt(s_l2_error)/sqrt(s_l2_norm));
-      //linf_l2_norms[2] = std::max(linf_l2_norms[2],s_l2_norm*s_l2_norm);
-
-      err.l2_l2_errors[2] += s_l2_error;
-      err.l2_l2_norms[2] += s_l2_norm;
-
-      // Stress Hdiv seminorm
-      cellwise_errors = 0;
-      cellwise_norms = 0;
-
-      double s_hd_error = 0;
-      double s_hd_norm = 0;
-
-      for (int i=0; i<dim; ++i){
-        const ComponentSelectFunction<dim> stress_component_mask (std::make_pair(i*dim,(i+1)*dim), total_dim);
-
-        VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-                                           cellwise_div_errors, quadrature,
-                                           VectorTools::Hdiv_seminorm,
-                                           &stress_component_mask);
-        s_hd_error += cellwise_div_errors.norm_sqr();
-
-        VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-                                           cellwise_div_norms, quadrature,
-                                           VectorTools::Hdiv_seminorm,
-                                           &stress_component_mask);
-        s_hd_norm += cellwise_div_norms.norm_sqr();
-      }
-      s_l2_error+= s_hd_error;
-      s_l2_norm+= s_hd_norm;
-      err.linf_l2_errors[2] = std::max(err.linf_l2_errors[2],sqrt(s_l2_error)/sqrt(s_l2_norm));
-
-//    s_hd_error = sqrt(s_hd_error);
-//    s_hd_norm = sqrt(s_hd_norm);
-
-//      std::cout << "Component function test: " << std::endl;
-//      Vector<double> tmp(MixedBiotProblem::total_dim);
-//      displacement_mask.vector_value(Point<dim>(), tmp);
-//      std::cout << tmp << std::endl;
-
-      err.velocity_stress_l2_div_errors[1] += s_hd_error;
-      err.velocity_stress_l2_div_norms[1] += s_hd_norm;     // put += back!
-
-      double l_int_error_elast=1, l_int_norm_elast=1;
-      double l_int_error_darcy=1, l_int_norm_darcy=1;
-//      double l_int_error=1, l_int_norm=1;
-        if (mortar_flag)
-        {
-            DisplacementBoundaryValues<dim> displ_solution;
-            displ_solution.set_time(prm.time);
-            std::vector<double> tmp_err_vect(2,0);
-            tmp_err_vect = compute_interface_error();
-//            l_int_error_elast = compute_interface_error();
-            l_int_error_elast =tmp_err_vect[0];
-            l_int_error_darcy =tmp_err_vect[1];
-//            if(split_flag==0){
-//            	l_int_error=pow(l_int_error_elast,2)+pow(l_int_error_darcy,2);
-//            	l_int_error= sqrt(l_int_error);
-//            }
-
-            interface_fe_function = 0;
-            interface_fe_function_mortar = 0;
-            tmp_err_vect = compute_interface_error();
-//            l_int_norm_elast = compute_interface_error();
-            l_int_norm_elast = tmp_err_vect[0];
-            l_int_norm_darcy = tmp_err_vect[1];
-//            if(split_flag==0){
-//                l_int_norm=pow(l_int_norm_elast,2)+pow(l_int_norm_darcy,2);
-//                l_int_norm= sqrt(l_int_norm);
-//            }
-        }
+//
+////    s_hd_error = sqrt(s_hd_error);
+////    s_hd_norm = sqrt(s_hd_norm);
+//
+////      std::cout << "Component function test: " << std::endl;
+////      Vector<double> tmp(MixedBiotProblem::total_dim);
+////      displacement_mask.vector_value(Point<dim>(), tmp);
+////      std::cout << tmp << std::endl;
+//
+//      err.velocity_stress_l2_div_errors[1] += s_hd_error;
+//      err.velocity_stress_l2_div_norms[1] += s_hd_norm;     // put += back!
+//
+//      double l_int_error_elast=1, l_int_norm_elast=1;
+//      double l_int_error_darcy=1, l_int_norm_darcy=1;
+////      double l_int_error=1, l_int_norm=1;
+//        if (mortar_flag)
+//        {
+//            DisplacementBoundaryValues<dim> displ_solution;
+//            displ_solution.set_time(prm.time);
+//            std::vector<double> tmp_err_vect(2,0);
+//            tmp_err_vect = compute_interface_error();
+////            l_int_error_elast = compute_interface_error();
+//            l_int_error_elast =tmp_err_vect[0];
+//            l_int_error_darcy =tmp_err_vect[1];
+////            if(split_flag==0){
+////            	l_int_error=pow(l_int_error_elast,2)+pow(l_int_error_darcy,2);
+////            	l_int_error= sqrt(l_int_error);
+////            }
+//
+//            interface_fe_function = 0;
+//            interface_fe_function_mortar = 0;
+//            tmp_err_vect = compute_interface_error();
+////            l_int_norm_elast = compute_interface_error();
+//            l_int_norm_elast = tmp_err_vect[0];
+//            l_int_norm_darcy = tmp_err_vect[1];
+////            if(split_flag==0){
+////                l_int_norm=pow(l_int_norm_elast,2)+pow(l_int_norm_darcy,2);
+////                l_int_norm= sqrt(l_int_norm);
+////            }
+//        }
 
 
       // On the last time step compute actual errors
       if(std::fabs(prm.time-total_time) < 1.0e-12)
       {
-        // Assemble convergence table
-        const unsigned int n_active_cells=triangulation.n_active_cells();
-        const unsigned int n_dofs=dof_handler.n_dofs();
-
-        double send_buf_num[13] = {err.l2_l2_errors[0],
-                                   err.velocity_stress_l2_div_errors[0],
-                                   err.l2_l2_errors[1],
-                                   err.pressure_disp_l2_midcell_errors[0],
-                                   err.linf_l2_errors[1],
-                                   err.l2_l2_errors[2],
-                                   err.velocity_stress_l2_div_errors[1],
-                                   err.linf_l2_errors[2],
-                                   err.l2_l2_errors[3],
-                                   err.pressure_disp_l2_midcell_errors[1],
-                                   err.l2_l2_errors[4],
-								   l_int_error_elast,
-								   l_int_error_darcy};
-
-        double send_buf_den[13] = {err.l2_l2_norms[0],
-                                   err.velocity_stress_l2_div_norms[0],
-                                   err.l2_l2_norms[1],
-                                   err.pressure_disp_l2_midcell_norms[0],
-                                   0,
-                                   err.l2_l2_norms[2],
-                                   err.velocity_stress_l2_div_norms[1],
-                                   0,
-                                   err.l2_l2_norms[3],
-                                   err.pressure_disp_l2_midcell_norms[1],
-                                   err.l2_l2_norms[4],
-								   l_int_norm_elast,
-								   l_int_norm_darcy};
-
-        double recv_buf_num[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
-        double recv_buf_den[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-        MPI_Reduce(&send_buf_num[0], &recv_buf_num[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
-        MPI_Reduce(&send_buf_den[0], &recv_buf_den[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
-
-        for (unsigned int i=0; i<11; ++i)
-          if (i != 4 && i != 7 && i != 0 && i != 8 && i != 11 && i != 12)
-            recv_buf_num[i] = sqrt(recv_buf_num[i])/sqrt(recv_buf_den[i]);
+//        // Assemble convergence table
+//        const unsigned int n_active_cells=triangulation.n_active_cells();
+//        const unsigned int n_dofs=dof_handler.n_dofs();
+//
+//        double send_buf_num[13] = {err.l2_l2_errors[0],
+//                                   err.velocity_stress_l2_div_errors[0],
+//                                   err.l2_l2_errors[1],
+//                                   err.pressure_disp_l2_midcell_errors[0],
+//                                   err.linf_l2_errors[1],
+//                                   err.l2_l2_errors[2],
+//                                   err.velocity_stress_l2_div_errors[1],
+//                                   err.linf_l2_errors[2],
+//                                   err.l2_l2_errors[3],
+//                                   err.pressure_disp_l2_midcell_errors[1],
+//                                   err.l2_l2_errors[4],
+//								   l_int_error_elast,
+//								   l_int_error_darcy};
+//
+//        double send_buf_den[13] = {err.l2_l2_norms[0],
+//                                   err.velocity_stress_l2_div_norms[0],
+//                                   err.l2_l2_norms[1],
+//                                   err.pressure_disp_l2_midcell_norms[0],
+//                                   0,
+//                                   err.l2_l2_norms[2],
+//                                   err.velocity_stress_l2_div_norms[1],
+//                                   0,
+//                                   err.l2_l2_norms[3],
+//                                   err.pressure_disp_l2_midcell_norms[1],
+//                                   err.l2_l2_norms[4],
+//								   l_int_norm_elast,
+//								   l_int_norm_darcy};
+//
+//        double recv_buf_num[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+//        double recv_buf_den[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+//
+//        MPI_Reduce(&send_buf_num[0], &recv_buf_num[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
+//        MPI_Reduce(&send_buf_den[0], &recv_buf_den[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
+//
+//        for (unsigned int i=0; i<11; ++i)
+//          if (i != 4 && i != 7 && i != 0 && i != 8 && i != 11 && i != 12)
+//            recv_buf_num[i] = sqrt(recv_buf_num[i])/sqrt(recv_buf_den[i]);
 //          else
 //            recv_buf_num[i] = recv_buf_num[i];
  //    Calculating the relative error in mortar displacement.
@@ -3565,33 +3566,33 @@ namespace dd_biot
         	convergence_table.add_value("# CG_Elast",max_cg_iteration);
         	convergence_table.add_value("# CG_Darcy",max_cg_iteration_darcy);
         }
-
-        convergence_table.add_value("Velocity,L8-Hdiv", recv_buf_num[0]);
-//        convergence_table.add_value("Velocity,L2-Hdiv", recv_buf_num[1]);
-
-//        convergence_table.add_value("Pressure,L2-L2", recv_buf_num[2]);
-//        convergence_table.add_value("Pressure,L2-L2mid", recv_buf_num[3]);
-        convergence_table.add_value("Pressure,L8-L2", recv_buf_num[4]);
-
-//        convergence_table.add_value("Stress,L2-L2", recv_buf_num[5]);
-//        convergence_table.add_value("Stress,L2-Hdiv", recv_buf_num[6]);
-        convergence_table.add_value("Stress,L8-Hdiv", recv_buf_num[7]);
-
-        convergence_table.add_value("Displ,L8-L2", recv_buf_num[8]);
-//        convergence_table.add_value("Displ,L2-L2mid", recv_buf_num[9]);
+//
+//        convergence_table.add_value("Velocity,L8-Hdiv", recv_buf_num[0]);
+////        convergence_table.add_value("Velocity,L2-Hdiv", recv_buf_num[1]);
+//
+////        convergence_table.add_value("Pressure,L2-L2", recv_buf_num[2]);
+////        convergence_table.add_value("Pressure,L2-L2mid", recv_buf_num[3]);
+//        convergence_table.add_value("Pressure,L8-L2", recv_buf_num[4]);
+//
+////        convergence_table.add_value("Stress,L2-L2", recv_buf_num[5]);
+////        convergence_table.add_value("Stress,L2-Hdiv", recv_buf_num[6]);
+//        convergence_table.add_value("Stress,L8-Hdiv", recv_buf_num[7]);
+//
+//        convergence_table.add_value("Displ,L8-L2", recv_buf_num[8]);
+////        convergence_table.add_value("Displ,L2-L2mid", recv_buf_num[9]);
 
 //        convergence_table.add_value("Rotat,L2-L2", recv_buf_num[10]);
-        if (mortar_flag)
-        {
-          convergence_table.add_value("Lambda,Elast", recv_buf_num[11]/recv_buf_den[11]);
-          convergence_table.add_value("Lambda,Darcy", recv_buf_num[12]/recv_buf_den[12]);
-          if(split_flag==0)
-          {
-        	double combined_l_int_error =(pow(recv_buf_num[11],2) + pow(recv_buf_num[12],2))/(pow(recv_buf_den[11],2) + pow(recv_buf_den[12],2));
-        	combined_l_int_error = sqrt(combined_l_int_error);
-        	convergence_table.add_value("Lambda,Biot", combined_l_int_error);
-          }
-        }
+//        if (mortar_flag)
+//        {
+//          convergence_table.add_value("Lambda,Elast", recv_buf_num[11]/recv_buf_den[11]);
+//          convergence_table.add_value("Lambda,Darcy", recv_buf_num[12]/recv_buf_den[12]);
+//          if(split_flag==0)
+//          {
+//        	double combined_l_int_error =(pow(recv_buf_num[11],2) + pow(recv_buf_num[12],2))/(pow(recv_buf_den[11],2) + pow(recv_buf_den[12],2));
+//        	combined_l_int_error = sqrt(combined_l_int_error);
+//        	convergence_table.add_value("Lambda,Biot", combined_l_int_error);
+//          }
+//        }
       }
     }
 
@@ -3867,7 +3868,20 @@ namespace dd_biot
                     GridGenerator::subdivided_hyper_rectangle(triangulation, reps[this_mpi], p1, p2);
                 else
                 {
-                    GridGenerator::subdivided_hyper_rectangle(triangulation, reps[0], p1, p2);
+                	std::vector<unsigned int> rep_pattern={1,1};
+                	if (n_processes == 2 || n_processes == 8 || n_processes ==32)
+                	{
+                		rep_pattern[1] = 2;
+                	}
+                    GridGenerator::subdivided_hyper_rectangle(triangulation, rep_pattern, p1, p2);
+                    if (n_processes == 2 || n_processes == 4)
+                    {
+                    	triangulation.refine_global(2);
+                    }
+                    else if (n_processes == 8 || n_processes == 16)
+					{
+						triangulation.refine_global(1);
+					}
                     if (this_mpi == 0 || this_mpi == 3)
                       GridTools::distort_random (0.1*(1+this_mpi), triangulation, true);
                 }
