@@ -3984,6 +3984,7 @@ namespace dd_biot
               {
             	  solution.block(1).sadd(prm.time_step, 1.0, old_solution.block(1));  // recovering displacement soluton from derivative
 //            	  solution.block(2).sadd(prm.time_step, 1.0, old_solution.block(2)); //recovering rotation solution from derivative
+
               }
               old_solution = solution;
               compute_errors(cycle);
