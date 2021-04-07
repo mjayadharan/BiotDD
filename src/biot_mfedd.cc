@@ -3868,20 +3868,20 @@ namespace dd_biot
                     GridGenerator::subdivided_hyper_rectangle(triangulation, reps[this_mpi], p1, p2);
                 else
                 {
-                	std::vector<unsigned int> rep_pattern={1,1};
-                	if (n_processes == 2 || n_processes == 8 || n_processes ==32)
-                	{
-                		rep_pattern[1] = 2;
-                	}
-                    GridGenerator::subdivided_hyper_rectangle(triangulation, rep_pattern, p1, p2);
-                    if (n_processes == 2 || n_processes == 4)
-                    {
-                    	triangulation.refine_global(2);
-                    }
-                    else if (n_processes == 8 || n_processes == 16)
-					{
-						triangulation.refine_global(1);
-					}
+//                	std::vector<unsigned int> rep_pattern={1,1};
+//                	if (n_processes == 2 || n_processes == 8 || n_processes ==32)
+//                	{
+//                		rep_pattern[1] = 2;
+//                	}
+                    GridGenerator::subdivided_hyper_rectangle(triangulation, reps[0], p1, p2);
+//                    if (n_processes == 2 || n_processes == 4)
+//                    {
+//                    	triangulation.refine_global(2);
+//                    }
+//                    else if (n_processes == 8 || n_processes == 16)
+//					{
+//						triangulation.refine_global(1);
+//					}
                     if (this_mpi == 0 || this_mpi == 3)
                       GridTools::distort_random (0.1*(1+this_mpi), triangulation, true);
                 }
