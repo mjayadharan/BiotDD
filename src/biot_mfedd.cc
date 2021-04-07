@@ -3251,553 +3251,553 @@ namespace dd_biot
         return return_vector;
     }
 
-
     // MixedBiotProblemDD::compute_errors
-    template <int dim>
-    void MixedBiotProblemDD<dim>::compute_errors (const unsigned int cycle)
-    {
-      TimerOutput::Scope t(computing_timer, "Compute errors");
+       template <int dim>
+       void MixedBiotProblemDD<dim>::compute_errors (const unsigned int cycle)
+       {
+         TimerOutput::Scope t(computing_timer, "Compute errors");
 
-      const unsigned int total_dim = static_cast<unsigned int>(dim*dim + dim + 0.5*dim*(dim-1) + dim + 1);
+         const unsigned int total_dim = static_cast<unsigned int>(dim*dim + dim + 0.5*dim*(dim-1) + dim + 1);
 
-//      const ComponentSelectFunction<dim> stress_mask(std::make_pair(0,dim*dim), total_dim);
-//      const ComponentSelectFunction<dim> displacement_mask(std::make_pair(dim*dim,dim*dim+dim), total_dim);
-//      const ComponentSelectFunction<dim> rotation_mask(std::make_pair(dim*dim+dim,dim*dim+dim+0.5*dim*(dim-1)), total_dim);
-//
-//      const ComponentSelectFunction<dim> velocity_mask(std::make_pair(dim*dim+dim+0.5*dim*(dim-1), dim*dim+dim+0.5*dim*(dim-1)+dim), total_dim);
-//      const ComponentSelectFunction<dim> pressure_mask(static_cast<unsigned int>(dim*dim+dim+0.5*dim*(dim-1)+dim), total_dim);
-//
-//      ExactSolution<dim> exact_solution;
-//      exact_solution.set_time(prm.time);
-//
-//      // Vectors to temporarily store cellwise errros
-//      Vector<double> cellwise_errors (triangulation.n_active_cells());
-//      Vector<double> cellwise_norms (triangulation.n_active_cells());
-//
-//      // Vectors to temporarily store cellwise componentwise div errors
-//      Vector<double> cellwise_div_errors (triangulation.n_active_cells());
-//      Vector<double> cellwise_div_norms (triangulation.n_active_cells());
-//
-//      // Define quadrature points to compute errors at
-//      QTrapez<1>      q_trapez;
-//      QIterated<dim>  quadrature(q_trapez,degree+2);
-//      QGauss<dim>  quadrature_div(5);
-//
-//      // This is used to show superconvergence at midcells
-//      QGauss<dim>   quadrature_super(1);
-//
-//      // Since we want to compute the relative norm
-//      BlockVector<double> zerozeros(1, solution.size());
-//
-//      // Pressure error and norm
-//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-//                                         cellwise_errors, quadrature,
-//                                         VectorTools::L2_norm,
-//                                         &pressure_mask);
-//      const double p_l2_error = cellwise_errors.norm_sqr();
-//
-//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-//                                         cellwise_norms, quadrature,
-//                                         VectorTools::L2_norm,
-//                                         &pressure_mask);
-//      const double p_l2_norm = cellwise_norms.norm_sqr();
-//
-//      // L2 in time error
-//      err.l2_l2_errors[1] += p_l2_error;
-//      err.l2_l2_norms[1] += p_l2_norm;
-//
-//      // Linf in time error
-//      err.linf_l2_errors[1] = std::max(err.linf_l2_errors[1], sqrt(p_l2_error)/sqrt(p_l2_norm));
-//      //linf_l2_norms[1] = std::max(linf_l2_norms[1], p_l2_norm*p_l2_norm);
-//
-//      // Pressure error and norm at midcells
-//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-//                                         cellwise_errors, quadrature_super,
-//                                         VectorTools::L2_norm,
-//                                         &pressure_mask);
-//      const double p_l2_mid_error = cellwise_errors.norm_sqr();
-//
-//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-//                                         cellwise_norms, quadrature_super,
-//                                         VectorTools::L2_norm,
-//                                         &pressure_mask);
-//      const double p_l2_mid_norm = cellwise_norms.norm_sqr();
-//
-//      // L2 in time error
-//      err.pressure_disp_l2_midcell_errors[0] +=p_l2_mid_error;
-//      err.pressure_disp_l2_midcell_norms[0] += p_l2_mid_norm;
-//
-//      // Velocity L2 error and norm
-//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-//                                         cellwise_errors, quadrature,
-//                                         VectorTools::L2_norm,
-//                                         &velocity_mask);
-//      double u_l2_error = cellwise_errors.norm_sqr();
-//
-//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-//                                         cellwise_norms, quadrature,
-//                                         VectorTools::L2_norm,
-//                                         &velocity_mask);
-//
-//      double u_l2_norm = cellwise_norms.norm_sqr();
-//
-//      // following is actually calculating H_div norm for velocity
-////      err.l2_l2_errors[0] +=u_l2_error;
-//      err.l2_l2_norms[0] += u_l2_norm;
-      double total_time = prm.time_step * prm.num_time_steps;
-//      {
-//        // Velocity Hdiv error and seminorm
-//        VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-//                                           cellwise_errors, quadrature,
-//                                           VectorTools::Hdiv_seminorm,
-//                                           &velocity_mask);
-//        const double u_hd_error = cellwise_errors.norm_sqr();
-//
-//        VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-//                                           cellwise_norms, quadrature,
-//                                           VectorTools::Hdiv_seminorm,
-//                                           &velocity_mask);
-//        const double u_hd_norm = cellwise_norms.norm_sqr();
-//
-//        //std::cout << u_hd_error << std::endl;
-//
-//        // L2 in time error
-//        //if (std::fabs(time-5*time_step) > 1.0e-12) {
-//        err.velocity_stress_l2_div_errors[0] += u_hd_error;
-//        err.velocity_stress_l2_div_norms[0] += u_hd_norm;     // put += back!
-//        //}
-//        u_l2_error+=u_hd_error;
-//		u_l2_norm+=u_hd_norm;
-//      }
-//      err.l2_l2_errors[0] = std::max(err.l2_l2_errors[0],sqrt(u_l2_error)/sqrt(u_l2_norm));
-////      err.linf_l2_errors[1] = std::max(err.linf_l2_errors[1], sqrt(p_l2_error)/sqrt(p_l2_norm));
-//      // Rotation error and norm
-//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-//                                         cellwise_errors, quadrature,
-//                                         VectorTools::L2_norm,
-//                                         &rotation_mask);
-//      const double r_l2_error = cellwise_errors.norm_sqr();
-//
-//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-//                                         cellwise_norms, quadrature,
-//                                         VectorTools::L2_norm,
-//                                         &rotation_mask);
-//      const double r_l2_norm = cellwise_norms.norm_sqr();
-//
-//      err.l2_l2_errors[4] += r_l2_error;
-//      err.l2_l2_norms[4] += r_l2_norm;
-//
-//      // Displacement error and norm
-//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-//                                         cellwise_errors, quadrature,
-//                                         VectorTools::L2_norm,
-//                                         &displacement_mask);
-//      const double d_l2_error = cellwise_errors.norm_sqr();
-//
-//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-//                                         cellwise_norms, quadrature,
-//                                         VectorTools::L2_norm,
-//                                         &displacement_mask);
-//      const double d_l2_norm = cellwise_norms.norm_sqr();
-//
-////      err.l2_l2_errors[3] += d_l2_error;
-//      err.l2_l2_errors[3] = std::max(err.l2_l2_errors[3], sqrt(d_l2_error)/sqrt(d_l2_norm));
-//      err.l2_l2_norms[3] += d_l2_norm;
-//
-//      // Displacement error and norm at midcells
-//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-//                                         cellwise_errors, quadrature_super,
-//                                         VectorTools::L2_norm,
-//                                         &displacement_mask);
-//      const double d_l2_mid_error = cellwise_errors.norm_sqr();
-//
-//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-//                                         cellwise_norms, quadrature_super,
-//                                         VectorTools::L2_norm,
-//                                         &displacement_mask);
-//      const double d_l2_mid_norm = cellwise_norms.norm_sqr();
-//
-//      // L2 in time error
-//      err.pressure_disp_l2_midcell_errors[1] += d_l2_mid_error;
-//      err.pressure_disp_l2_midcell_norms[1] += d_l2_mid_norm;
-//
-//      // Stress L2 error and norm
-//      VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-//                                         cellwise_errors, quadrature,
-//                                         VectorTools::L2_norm,
-//                                         &stress_mask);
-//      double s_l2_error = cellwise_errors.norm_sqr();
-//
-//      VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-//                                         cellwise_norms, quadrature,
-//                                         VectorTools::L2_norm,
-//                                         &stress_mask);
-//
-//      double s_l2_norm = cellwise_norms.norm_sqr();
-//
-//      // Linf in time error
-////      err.linf_l2_errors[2] = std::max(err.linf_l2_errors[2],sqrt(s_l2_error)/sqrt(s_l2_norm));
-//      //linf_l2_norms[2] = std::max(linf_l2_norms[2],s_l2_norm*s_l2_norm);
-//
-//      err.l2_l2_errors[2] += s_l2_error;
-//      err.l2_l2_norms[2] += s_l2_norm;
-//
-//      // Stress Hdiv seminorm
-//      cellwise_errors = 0;
-//      cellwise_norms = 0;
-//
-//      double s_hd_error = 0;
-//      double s_hd_norm = 0;
-//
-//      for (int i=0; i<dim; ++i){
-//        const ComponentSelectFunction<dim> stress_component_mask (std::make_pair(i*dim,(i+1)*dim), total_dim);
-//
-//        VectorTools::integrate_difference (dof_handler, solution, exact_solution,
-//                                           cellwise_div_errors, quadrature,
-//                                           VectorTools::Hdiv_seminorm,
-//                                           &stress_component_mask);
-//        s_hd_error += cellwise_div_errors.norm_sqr();
-//
-//        VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
-//                                           cellwise_div_norms, quadrature,
-//                                           VectorTools::Hdiv_seminorm,
-//                                           &stress_component_mask);
-//        s_hd_norm += cellwise_div_norms.norm_sqr();
-//      }
-//      s_l2_error+= s_hd_error;
-//      s_l2_norm+= s_hd_norm;
-//      err.linf_l2_errors[2] = std::max(err.linf_l2_errors[2],sqrt(s_l2_error)/sqrt(s_l2_norm));
-//
-////    s_hd_error = sqrt(s_hd_error);
-////    s_hd_norm = sqrt(s_hd_norm);
-//
-////      std::cout << "Component function test: " << std::endl;
-////      Vector<double> tmp(MixedBiotProblem::total_dim);
-////      displacement_mask.vector_value(Point<dim>(), tmp);
-////      std::cout << tmp << std::endl;
-//
-//      err.velocity_stress_l2_div_errors[1] += s_hd_error;
-//      err.velocity_stress_l2_div_norms[1] += s_hd_norm;     // put += back!
-//
-//      double l_int_error_elast=1, l_int_norm_elast=1;
-//      double l_int_error_darcy=1, l_int_norm_darcy=1;
-////      double l_int_error=1, l_int_norm=1;
-//        if (mortar_flag)
-//        {
-//            DisplacementBoundaryValues<dim> displ_solution;
-//            displ_solution.set_time(prm.time);
-//            std::vector<double> tmp_err_vect(2,0);
-//            tmp_err_vect = compute_interface_error();
-////            l_int_error_elast = compute_interface_error();
-//            l_int_error_elast =tmp_err_vect[0];
-//            l_int_error_darcy =tmp_err_vect[1];
-////            if(split_flag==0){
-////            	l_int_error=pow(l_int_error_elast,2)+pow(l_int_error_darcy,2);
-////            	l_int_error= sqrt(l_int_error);
-////            }
-//
-//            interface_fe_function = 0;
-//            interface_fe_function_mortar = 0;
-//            tmp_err_vect = compute_interface_error();
-////            l_int_norm_elast = compute_interface_error();
-//            l_int_norm_elast = tmp_err_vect[0];
-//            l_int_norm_darcy = tmp_err_vect[1];
-////            if(split_flag==0){
-////                l_int_norm=pow(l_int_norm_elast,2)+pow(l_int_norm_darcy,2);
-////                l_int_norm= sqrt(l_int_norm);
-////            }
-//        }
+         const ComponentSelectFunction<dim> stress_mask(std::make_pair(0,dim*dim), total_dim);
+         const ComponentSelectFunction<dim> displacement_mask(std::make_pair(dim*dim,dim*dim+dim), total_dim);
+         const ComponentSelectFunction<dim> rotation_mask(std::make_pair(dim*dim+dim,dim*dim+dim+0.5*dim*(dim-1)), total_dim);
 
+         const ComponentSelectFunction<dim> velocity_mask(std::make_pair(dim*dim+dim+0.5*dim*(dim-1), dim*dim+dim+0.5*dim*(dim-1)+dim), total_dim);
+         const ComponentSelectFunction<dim> pressure_mask(static_cast<unsigned int>(dim*dim+dim+0.5*dim*(dim-1)+dim), total_dim);
 
-      // On the last time step compute actual errors
-      if(std::fabs(prm.time-total_time) < 1.0e-12)
-      {
-//        // Assemble convergence table
-//        const unsigned int n_active_cells=triangulation.n_active_cells();
-//        const unsigned int n_dofs=dof_handler.n_dofs();
-//
-//        double send_buf_num[13] = {err.l2_l2_errors[0],
-//                                   err.velocity_stress_l2_div_errors[0],
-//                                   err.l2_l2_errors[1],
-//                                   err.pressure_disp_l2_midcell_errors[0],
-//                                   err.linf_l2_errors[1],
-//                                   err.l2_l2_errors[2],
-//                                   err.velocity_stress_l2_div_errors[1],
-//                                   err.linf_l2_errors[2],
-//                                   err.l2_l2_errors[3],
-//                                   err.pressure_disp_l2_midcell_errors[1],
-//                                   err.l2_l2_errors[4],
-//								   l_int_error_elast,
-//								   l_int_error_darcy};
-//
-//        double send_buf_den[13] = {err.l2_l2_norms[0],
-//                                   err.velocity_stress_l2_div_norms[0],
-//                                   err.l2_l2_norms[1],
-//                                   err.pressure_disp_l2_midcell_norms[0],
-//                                   0,
-//                                   err.l2_l2_norms[2],
-//                                   err.velocity_stress_l2_div_norms[1],
-//                                   0,
-//                                   err.l2_l2_norms[3],
-//                                   err.pressure_disp_l2_midcell_norms[1],
-//                                   err.l2_l2_norms[4],
-//								   l_int_norm_elast,
-//								   l_int_norm_darcy};
-//
-//        double recv_buf_num[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
-//        double recv_buf_den[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
-//
-//        MPI_Reduce(&send_buf_num[0], &recv_buf_num[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
-//        MPI_Reduce(&send_buf_den[0], &recv_buf_den[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
-//
-//        for (unsigned int i=0; i<11; ++i)
-//          if (i != 4 && i != 7 && i != 0 && i != 8 && i != 11 && i != 12)
-//            recv_buf_num[i] = sqrt(recv_buf_num[i])/sqrt(recv_buf_den[i]);
-//          else
-//            recv_buf_num[i] = recv_buf_num[i];
- //    Calculating the relative error in mortar displacement.
-//        recv_buf_num[11] = recv_buf_num[11]/recv_buf_den[11];
-//        recv_buf_num[12] = recv_buf_num[12]/recv_buf_den[12];
+         ExactSolution<dim> exact_solution;
+         exact_solution.set_time(prm.time);
 
-        convergence_table.add_value("cycle", cycle);
-        if(split_flag==0)
-        convergence_table.add_value("# GMRES", max_cg_iteration);
-        else if(split_flag!=0){
-        	convergence_table.add_value("# CG_Elast",max_cg_iteration);
-        	convergence_table.add_value("# CG_Darcy",max_cg_iteration_darcy);
-        }
-//
-//        convergence_table.add_value("Velocity,L8-Hdiv", recv_buf_num[0]);
-////        convergence_table.add_value("Velocity,L2-Hdiv", recv_buf_num[1]);
-//
-////        convergence_table.add_value("Pressure,L2-L2", recv_buf_num[2]);
-////        convergence_table.add_value("Pressure,L2-L2mid", recv_buf_num[3]);
-//        convergence_table.add_value("Pressure,L8-L2", recv_buf_num[4]);
-//
-////        convergence_table.add_value("Stress,L2-L2", recv_buf_num[5]);
-////        convergence_table.add_value("Stress,L2-Hdiv", recv_buf_num[6]);
-//        convergence_table.add_value("Stress,L8-Hdiv", recv_buf_num[7]);
-//
-//        convergence_table.add_value("Displ,L8-L2", recv_buf_num[8]);
-////        convergence_table.add_value("Displ,L2-L2mid", recv_buf_num[9]);
+         // Vectors to temporarily store cellwise errros
+         Vector<double> cellwise_errors (triangulation.n_active_cells());
+         Vector<double> cellwise_norms (triangulation.n_active_cells());
 
-//        convergence_table.add_value("Rotat,L2-L2", recv_buf_num[10]);
-//        if (mortar_flag)
-//        {
-//          convergence_table.add_value("Lambda,Elast", recv_buf_num[11]/recv_buf_den[11]);
-//          convergence_table.add_value("Lambda,Darcy", recv_buf_num[12]/recv_buf_den[12]);
-//          if(split_flag==0)
-//          {
-//        	double combined_l_int_error =(pow(recv_buf_num[11],2) + pow(recv_buf_num[12],2))/(pow(recv_buf_den[11],2) + pow(recv_buf_den[12],2));
-//        	combined_l_int_error = sqrt(combined_l_int_error);
-//        	convergence_table.add_value("Lambda,Biot", combined_l_int_error);
-//          }
-//        }
-      }
-    }
+         // Vectors to temporarily store cellwise componentwise div errors
+         Vector<double> cellwise_div_errors (triangulation.n_active_cells());
+         Vector<double> cellwise_div_norms (triangulation.n_active_cells());
+
+         // Define quadrature points to compute errors at
+         QTrapez<1>      q_trapez;
+         QIterated<dim>  quadrature(q_trapez,degree+2);
+         QGauss<dim>  quadrature_div(5);
+
+         // This is used to show superconvergence at midcells
+         QGauss<dim>   quadrature_super(1);
+
+         // Since we want to compute the relative norm
+         BlockVector<double> zerozeros(1, solution.size());
+
+         // Pressure error and norm
+         VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+                                            cellwise_errors, quadrature,
+                                            VectorTools::L2_norm,
+                                            &pressure_mask);
+         const double p_l2_error = cellwise_errors.norm_sqr();
+
+         VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+                                            cellwise_norms, quadrature,
+                                            VectorTools::L2_norm,
+                                            &pressure_mask);
+         const double p_l2_norm = cellwise_norms.norm_sqr();
+
+         // L2 in time error
+         err.l2_l2_errors[1] += p_l2_error;
+         err.l2_l2_norms[1] += p_l2_norm;
+
+         // Linf in time error
+         err.linf_l2_errors[1] = std::max(err.linf_l2_errors[1], sqrt(p_l2_error)/sqrt(p_l2_norm));
+         //linf_l2_norms[1] = std::max(linf_l2_norms[1], p_l2_norm*p_l2_norm);
+
+         // Pressure error and norm at midcells
+         VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+                                            cellwise_errors, quadrature_super,
+                                            VectorTools::L2_norm,
+                                            &pressure_mask);
+         const double p_l2_mid_error = cellwise_errors.norm_sqr();
+
+         VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+                                            cellwise_norms, quadrature_super,
+                                            VectorTools::L2_norm,
+                                            &pressure_mask);
+         const double p_l2_mid_norm = cellwise_norms.norm_sqr();
+
+         // L2 in time error
+         err.pressure_disp_l2_midcell_errors[0] +=p_l2_mid_error;
+         err.pressure_disp_l2_midcell_norms[0] += p_l2_mid_norm;
+
+         // Velocity L2 error and norm
+         VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+                                            cellwise_errors, quadrature,
+                                            VectorTools::L2_norm,
+                                            &velocity_mask);
+         double u_l2_error = cellwise_errors.norm_sqr();
+
+         VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+                                            cellwise_norms, quadrature,
+                                            VectorTools::L2_norm,
+                                            &velocity_mask);
+
+         double u_l2_norm = cellwise_norms.norm_sqr();
+
+         // following is actually calculating H_div norm for velocity
+   //      err.l2_l2_errors[0] +=u_l2_error;
+         err.l2_l2_norms[0] += u_l2_norm;
+         double total_time = prm.time_step * prm.num_time_steps;
+         {
+           // Velocity Hdiv error and seminorm
+           VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+                                              cellwise_errors, quadrature,
+                                              VectorTools::Hdiv_seminorm,
+                                              &velocity_mask);
+           const double u_hd_error = cellwise_errors.norm_sqr();
+
+           VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+                                              cellwise_norms, quadrature,
+                                              VectorTools::Hdiv_seminorm,
+                                              &velocity_mask);
+           const double u_hd_norm = cellwise_norms.norm_sqr();
+
+           //std::cout << u_hd_error << std::endl;
+
+           // L2 in time error
+           //if (std::fabs(time-5*time_step) > 1.0e-12) {
+           err.velocity_stress_l2_div_errors[0] += u_hd_error;
+           err.velocity_stress_l2_div_norms[0] += u_hd_norm;     // put += back!
+           //}
+           u_l2_error+=u_hd_error;
+   		u_l2_norm+=u_hd_norm;
+         }
+         err.l2_l2_errors[0] = std::max(err.l2_l2_errors[0],sqrt(u_l2_error)/sqrt(u_l2_norm));
+   //      err.linf_l2_errors[1] = std::max(err.linf_l2_errors[1], sqrt(p_l2_error)/sqrt(p_l2_norm));
+         // Rotation error and norm
+         VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+                                            cellwise_errors, quadrature,
+                                            VectorTools::L2_norm,
+                                            &rotation_mask);
+         const double r_l2_error = cellwise_errors.norm_sqr();
+
+         VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+                                            cellwise_norms, quadrature,
+                                            VectorTools::L2_norm,
+                                            &rotation_mask);
+         const double r_l2_norm = cellwise_norms.norm_sqr();
+
+         err.l2_l2_errors[4] += r_l2_error;
+         err.l2_l2_norms[4] += r_l2_norm;
+
+         // Displacement error and norm
+         VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+                                            cellwise_errors, quadrature,
+                                            VectorTools::L2_norm,
+                                            &displacement_mask);
+         const double d_l2_error = cellwise_errors.norm_sqr();
+
+         VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+                                            cellwise_norms, quadrature,
+                                            VectorTools::L2_norm,
+                                            &displacement_mask);
+         const double d_l2_norm = cellwise_norms.norm_sqr();
+
+   //      err.l2_l2_errors[3] += d_l2_error;
+         err.l2_l2_errors[3] = std::max(err.l2_l2_errors[3], sqrt(d_l2_error)/sqrt(d_l2_norm));
+         err.l2_l2_norms[3] += d_l2_norm;
+
+         // Displacement error and norm at midcells
+         VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+                                            cellwise_errors, quadrature_super,
+                                            VectorTools::L2_norm,
+                                            &displacement_mask);
+         const double d_l2_mid_error = cellwise_errors.norm_sqr();
+
+         VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+                                            cellwise_norms, quadrature_super,
+                                            VectorTools::L2_norm,
+                                            &displacement_mask);
+         const double d_l2_mid_norm = cellwise_norms.norm_sqr();
+
+         // L2 in time error
+         err.pressure_disp_l2_midcell_errors[1] += d_l2_mid_error;
+         err.pressure_disp_l2_midcell_norms[1] += d_l2_mid_norm;
+
+         // Stress L2 error and norm
+         VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+                                            cellwise_errors, quadrature,
+                                            VectorTools::L2_norm,
+                                            &stress_mask);
+         double s_l2_error = cellwise_errors.norm_sqr();
+
+         VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+                                            cellwise_norms, quadrature,
+                                            VectorTools::L2_norm,
+                                            &stress_mask);
+
+         double s_l2_norm = cellwise_norms.norm_sqr();
+
+         // Linf in time error
+   //      err.linf_l2_errors[2] = std::max(err.linf_l2_errors[2],sqrt(s_l2_error)/sqrt(s_l2_norm));
+         //linf_l2_norms[2] = std::max(linf_l2_norms[2],s_l2_norm*s_l2_norm);
+
+         err.l2_l2_errors[2] += s_l2_error;
+         err.l2_l2_norms[2] += s_l2_norm;
+
+         // Stress Hdiv seminorm
+         cellwise_errors = 0;
+         cellwise_norms = 0;
+
+         double s_hd_error = 0;
+         double s_hd_norm = 0;
+
+         for (int i=0; i<dim; ++i){
+           const ComponentSelectFunction<dim> stress_component_mask (std::make_pair(i*dim,(i+1)*dim), total_dim);
+
+           VectorTools::integrate_difference (dof_handler, solution, exact_solution,
+                                              cellwise_div_errors, quadrature,
+                                              VectorTools::Hdiv_seminorm,
+                                              &stress_component_mask);
+           s_hd_error += cellwise_div_errors.norm_sqr();
+
+           VectorTools::integrate_difference (dof_handler, zerozeros, exact_solution,
+                                              cellwise_div_norms, quadrature,
+                                              VectorTools::Hdiv_seminorm,
+                                              &stress_component_mask);
+           s_hd_norm += cellwise_div_norms.norm_sqr();
+         }
+         s_l2_error+= s_hd_error;
+         s_l2_norm+= s_hd_norm;
+         err.linf_l2_errors[2] = std::max(err.linf_l2_errors[2],sqrt(s_l2_error)/sqrt(s_l2_norm));
+
+   //    s_hd_error = sqrt(s_hd_error);
+   //    s_hd_norm = sqrt(s_hd_norm);
+
+   //      std::cout << "Component function test: " << std::endl;
+   //      Vector<double> tmp(MixedBiotProblem::total_dim);
+   //      displacement_mask.vector_value(Point<dim>(), tmp);
+   //      std::cout << tmp << std::endl;
+
+         err.velocity_stress_l2_div_errors[1] += s_hd_error;
+         err.velocity_stress_l2_div_norms[1] += s_hd_norm;     // put += back!
+
+         double l_int_error_elast=1, l_int_norm_elast=1;
+         double l_int_error_darcy=1, l_int_norm_darcy=1;
+   //      double l_int_error=1, l_int_norm=1;
+           if (mortar_flag)
+           {
+               DisplacementBoundaryValues<dim> displ_solution;
+               displ_solution.set_time(prm.time);
+               std::vector<double> tmp_err_vect(2,0);
+               tmp_err_vect = compute_interface_error();
+   //            l_int_error_elast = compute_interface_error();
+               l_int_error_elast =tmp_err_vect[0];
+               l_int_error_darcy =tmp_err_vect[1];
+   //            if(split_flag==0){
+   //            	l_int_error=pow(l_int_error_elast,2)+pow(l_int_error_darcy,2);
+   //            	l_int_error= sqrt(l_int_error);
+   //            }
+
+               interface_fe_function = 0;
+               interface_fe_function_mortar = 0;
+               tmp_err_vect = compute_interface_error();
+   //            l_int_norm_elast = compute_interface_error();
+               l_int_norm_elast = tmp_err_vect[0];
+               l_int_norm_darcy = tmp_err_vect[1];
+   //            if(split_flag==0){
+   //                l_int_norm=pow(l_int_norm_elast,2)+pow(l_int_norm_darcy,2);
+   //                l_int_norm= sqrt(l_int_norm);
+   //            }
+           }
 
 
-    // MixedBiotProblemDD::output_results
-    template <int dim>
-    void MixedBiotProblemDD<dim>::output_results (const unsigned int cycle, const unsigned int refine)
-    {
-        TimerOutput::Scope t(computing_timer, "Output results");
-        unsigned int n_processes = Utilities::MPI::n_mpi_processes(mpi_communicator);
-        unsigned int this_mpi = Utilities::MPI::this_mpi_process(mpi_communicator);
+         // On the last time step compute actual errors
+         if(std::fabs(prm.time-total_time) < 1.0e-12)
+         {
+           // Assemble convergence table
+           const unsigned int n_active_cells=triangulation.n_active_cells();
+           const unsigned int n_dofs=dof_handler.n_dofs();
 
-        /* From here disabling for longer runs:
+           double send_buf_num[13] = {err.l2_l2_errors[0],
+                                      err.velocity_stress_l2_div_errors[0],
+                                      err.l2_l2_errors[1],
+                                      err.pressure_disp_l2_midcell_errors[0],
+                                      err.linf_l2_errors[1],
+                                      err.l2_l2_errors[2],
+                                      err.velocity_stress_l2_div_errors[1],
+                                      err.linf_l2_errors[2],
+                                      err.l2_l2_errors[3],
+                                      err.pressure_disp_l2_midcell_errors[1],
+                                      err.l2_l2_errors[4],
+   								   l_int_error_elast,
+   								   l_int_error_darcy};
 
+           double send_buf_den[13] = {err.l2_l2_norms[0],
+                                      err.velocity_stress_l2_div_norms[0],
+                                      err.l2_l2_norms[1],
+                                      err.pressure_disp_l2_midcell_norms[0],
+                                      0,
+                                      err.l2_l2_norms[2],
+                                      err.velocity_stress_l2_div_norms[1],
+                                      0,
+                                      err.l2_l2_norms[3],
+                                      err.pressure_disp_l2_midcell_norms[1],
+                                      err.l2_l2_norms[4],
+   								   l_int_norm_elast,
+   								   l_int_norm_darcy};
 
-      std::vector<std::string> solution_names;
-      switch(dim)
-      {
-        case 2:
-          solution_names.push_back ("s11");
-          solution_names.push_back ("s12");
-          solution_names.push_back ("s21");
-          solution_names.push_back ("s22");
-          solution_names.push_back ("d1");
-          solution_names.push_back ("d2");
-          solution_names.push_back ("r");
-          solution_names.push_back ("u1");
-          solution_names.push_back ("u2");
-          solution_names.push_back ("p");
-          break;
+           double recv_buf_num[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+           double recv_buf_den[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-        case 3:
-          solution_names.push_back ("s11");
-          solution_names.push_back ("s12");
-          solution_names.push_back ("s13");
-          solution_names.push_back ("s21");
-          solution_names.push_back ("s22");
-          solution_names.push_back ("s23");
-          solution_names.push_back ("s31");
-          solution_names.push_back ("s32");
-          solution_names.push_back ("s33");
-          solution_names.push_back ("d1");
-          solution_names.push_back ("d2");
-          solution_names.push_back ("d3");
-          solution_names.push_back ("r1");
-          solution_names.push_back ("r2");
-          solution_names.push_back ("r3");
-          solution_names.push_back ("u1");
-          solution_names.push_back ("u2");
-          solution_names.push_back ("u3");
-          solution_names.push_back ("p");
-          break;
+           MPI_Reduce(&send_buf_num[0], &recv_buf_num[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
+           MPI_Reduce(&send_buf_den[0], &recv_buf_den[0], 13, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
 
-        default:
-        Assert(false, ExcNotImplemented());
-      }
+           for (unsigned int i=0; i<11; ++i)
+             if (i != 4 && i != 7 && i != 0 && i != 8 && i != 11 && i != 12)
+               recv_buf_num[i] = sqrt(recv_buf_num[i])/sqrt(recv_buf_den[i]);
+   //          else
+   //            recv_buf_num[i] = recv_buf_num[i];
+    //    Calculating the relative error in mortar displacement.
+   //        recv_buf_num[11] = recv_buf_num[11]/recv_buf_den[11];
+   //        recv_buf_num[12] = recv_buf_num[12]/recv_buf_den[12];
 
-      // Components interpretation of the mechanics solution (vector^dim - vector - rotation)
-      std::vector<DataComponentInterpretation::DataComponentInterpretation> data_component_interpretation(dim*dim+dim, DataComponentInterpretation::component_is_part_of_vector);
-      switch (dim)
-      {
-        case 2:
-          data_component_interpretation.push_back (DataComponentInterpretation::component_is_scalar);
-          break;
+           convergence_table.add_value("cycle", cycle);
+           if(split_flag==0)
+           convergence_table.add_value("# GMRES", max_cg_iteration);
+           else if(split_flag!=0){
+           	convergence_table.add_value("# CG_Elast",max_cg_iteration);
+           	convergence_table.add_value("# CG_Darcy",max_cg_iteration_darcy);
+           }
 
-        case 3:
-          data_component_interpretation.push_back (DataComponentInterpretation::component_is_part_of_vector);
-          break;
+   //        convergence_table.add_value("Velocity,L8-Hdiv", recv_buf_num[0]);
+           convergence_table.add_value("Velocity,L2-L2", recv_buf_num[0]);
+   //        convergence_table.add_value("Velocity,L2-Hdiv", recv_buf_num[1]);
 
-        default:
-        Assert(false, ExcNotImplemented());
-          break;
-      }
+   //        convergence_table.add_value("Pressure,L2-L2", recv_buf_num[2]);
+   //        convergence_table.add_value("Pressure,L2-L2mid", recv_buf_num[3]);
+           convergence_table.add_value("Pressure,L8-L2", recv_buf_num[4]);
 
-      // Components interpretation of the flow solution (vector - scalar)
-      data_component_interpretation.push_back (DataComponentInterpretation::component_is_part_of_vector);
-      data_component_interpretation.push_back (DataComponentInterpretation::component_is_part_of_vector);
-      data_component_interpretation.push_back(DataComponentInterpretation::component_is_scalar);
+   //        convergence_table.add_value("Stress,L2-L2", recv_buf_num[5]);
+   //        convergence_table.add_value("Stress,L2-Hdiv", recv_buf_num[6]);
+           convergence_table.add_value("Stress,L8-Hdiv", recv_buf_num[7]);
 
-      DataOut<dim> data_out;
-      data_out.attach_dof_handler (dof_handler);
-      data_out.add_data_vector (solution, solution_names,
-                                DataOut<dim>::type_dof_data,
-                                data_component_interpretation);
+           convergence_table.add_value("Displ,L8-L2", recv_buf_num[8]);
+   //        convergence_table.add_value("Displ,L2-L2mid", recv_buf_num[9]);
 
-      data_out.build_patches ();
-
-
-      int tmp = prm.time/prm.time_step;
-      std::ofstream output ("solution_d" + Utilities::to_string(dim) + "_p"+Utilities::to_string(this_mpi,4)+"-" + std::to_string(tmp)+".vtu");
-      data_out.write_vtu (output);
-      //following lines create a file which paraview can use to link the subdomain results
-            if (this_mpi == 0)
-              {
-                std::vector<std::string> filenames;
-                for (unsigned int i=0;
-                     i<Utilities::MPI::n_mpi_processes(mpi_communicator);
-                     ++i)
-                  filenames.push_back ("solution_d" + Utilities::to_string(dim) + "_p"+Utilities::to_string(i,4)+"-" + std::to_string(tmp)+".vtu");
-
-                std::ofstream master_output (("solution_d" + Utilities::to_string(dim) + "-" + std::to_string(tmp) +
-                                              ".pvtu").c_str());
-                data_out.write_pvtu_record (master_output, filenames);
-              }
-
-      end of commenting out for disabling vtu outputs*/
+   //        convergence_table.add_value("Rotat,L2-L2", recv_buf_num[10]);
+           if (mortar_flag)
+           {
+             convergence_table.add_value("Lambda,Elast", recv_buf_num[11]/recv_buf_den[11]);
+             convergence_table.add_value("Lambda,Darcy", recv_buf_num[12]/recv_buf_den[12]);
+             if(split_flag==0)
+             {
+           	double combined_l_int_error =(pow(recv_buf_num[11],2) + pow(recv_buf_num[12],2))/(pow(recv_buf_den[11],2) + pow(recv_buf_den[12],2));
+           	combined_l_int_error = sqrt(combined_l_int_error);
+           	convergence_table.add_value("Lambda,Biot", combined_l_int_error);
+             }
+           }
+         }
+       }
 
 
-      double total_time = prm.time_step * prm.num_time_steps;
-      if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0 && cycle == refine-1 && std::abs(prm.time-total_time)<1.0e-12){
-        convergence_table.set_precision("Velocity,L8-Hdiv", 3);
-//        convergence_table.set_precision("Velocity,L2-Hdiv", 3);
-//        convergence_table.set_precision("Pressure,L2-L2", 3);
-//        convergence_table.set_precision("Pressure,L2-L2mid", 3);
-        convergence_table.set_precision("Pressure,L8-L2", 3);
+       // MixedBiotProblemDD::output_results
+       template <int dim>
+       void MixedBiotProblemDD<dim>::output_results (const unsigned int cycle, const unsigned int refine)
+       {
+           TimerOutput::Scope t(computing_timer, "Output results");
+           unsigned int n_processes = Utilities::MPI::n_mpi_processes(mpi_communicator);
+           unsigned int this_mpi = Utilities::MPI::this_mpi_process(mpi_communicator);
 
-        convergence_table.set_scientific("Velocity,L8-Hdiv", true);
-//        convergence_table.set_scientific("Velocity,L2-Hdiv", true);
-//        convergence_table.set_scientific("Pressure,L2-L2", true);
-//        convergence_table.set_scientific("Pressure,L2-L2mid", true);
-        convergence_table.set_scientific("Pressure,L8-L2", true);
+           /* From here disabling for longer runs:
+            */
 
-//        convergence_table.set_precision("Stress,L2-L2", 3);
-//        convergence_table.set_precision("Stress,L2-Hdiv", 3);
-        convergence_table.set_precision("Stress,L8-Hdiv", 3);
-        convergence_table.set_precision("Displ,L8-L2", 3);
-//        convergence_table.set_precision("Displ,L2-L2mid", 3);
-//        convergence_table.set_precision("Rotat,L2-L2", 3);
+         std::vector<std::string> solution_names;
+         switch(dim)
+         {
+           case 2:
+             solution_names.push_back ("s11");
+             solution_names.push_back ("s12");
+             solution_names.push_back ("s21");
+             solution_names.push_back ("s22");
+             solution_names.push_back ("d1");
+             solution_names.push_back ("d2");
+             solution_names.push_back ("r");
+             solution_names.push_back ("u1");
+             solution_names.push_back ("u2");
+             solution_names.push_back ("p");
+             break;
 
-//        convergence_table.set_scientific("Stress,L2-L2", true);
-//        convergence_table.set_scientific("Stress,L2-Hdiv", true);
-        convergence_table.set_scientific("Stress,L8-Hdiv", true);
-        convergence_table.set_scientific("Displ,L8-L2", true);
-//        convergence_table.set_scientific("Displ,L2-L2mid", true);
-//        convergence_table.set_scientific("Rotat,L2-L2", true);
+           case 3:
+             solution_names.push_back ("s11");
+             solution_names.push_back ("s12");
+             solution_names.push_back ("s13");
+             solution_names.push_back ("s21");
+             solution_names.push_back ("s22");
+             solution_names.push_back ("s23");
+             solution_names.push_back ("s31");
+             solution_names.push_back ("s32");
+             solution_names.push_back ("s33");
+             solution_names.push_back ("d1");
+             solution_names.push_back ("d2");
+             solution_names.push_back ("d3");
+             solution_names.push_back ("r1");
+             solution_names.push_back ("r2");
+             solution_names.push_back ("r3");
+             solution_names.push_back ("u1");
+             solution_names.push_back ("u2");
+             solution_names.push_back ("u3");
+             solution_names.push_back ("p");
+             break;
 
-//        convergence_table.set_tex_caption("# CG", "\\# cg");
-        if(split_flag==0)
-        	convergence_table.set_tex_caption("# GMRES", "\\# gmres");
-        else if (split_flag!=0){
-        	convergence_table.set_tex_caption("# CG_Elast", "\\# cg_Elast");
-        	convergence_table.set_tex_caption("# CG_Darcy", "\\# cg_Darcy");
-        }
+           default:
+           Assert(false, ExcNotImplemented());
+         }
 
-        convergence_table.set_tex_caption("Velocity,L8-Hdiv", "$ \\|z - z_h\\|_{L^{\\infty}(H_{div})} $");
-//        convergence_table.set_tex_caption("Velocity,L2-Hdiv", "$ \\|\\nabla\\cdot(\\u - \\u_h)\\|_{L^2(L^2)} $");
-//        convergence_table.set_tex_caption("Pressure,L2-L2", "$ \\|p - p_h\\|_{L^2(L^2)} $");
-//        convergence_table.set_tex_caption("Pressure,L2-L2mid", "$ \\|Qp - p_h\\|_{L^2(L^2)} $");
-        convergence_table.set_tex_caption("Pressure,L8-L2", "$ \\|p - p_h\\|_{L^{\\infty}(L^2)} $");
+         // Components interpretation of the mechanics solution (vector^dim - vector - rotation)
+         std::vector<DataComponentInterpretation::DataComponentInterpretation> data_component_interpretation(dim*dim+dim, DataComponentInterpretation::component_is_part_of_vector);
+         switch (dim)
+         {
+           case 2:
+             data_component_interpretation.push_back (DataComponentInterpretation::component_is_scalar);
+             break;
 
-//        convergence_table.set_tex_caption("Stress,L2-L2", "$ \\|\\sigma - \\sigma_h\\|_{L^{\\infty}(L^2)} $");
-//        convergence_table.set_tex_caption("Stress,L2-Hdiv", "$ \\|\\nabla\\cdot(\\sigma - \\sigma_h)\\|_{L^{\\infty}(L^2)} $");
-        convergence_table.set_tex_caption("Stress,L8-Hdiv", "$ \\|\\sigma - \\sigma_h\\|_{L^{\\infty}(H_{div})} $");
-        convergence_table.set_tex_caption("Displ,L8-L2", "$ \\|u - u_h\\|_{L^{\\infty}(L^2)} $");
-//        convergence_table.set_tex_caption("Displ,L2-L2mid", "$ \\|Q\\bbeta - \\bbeta_h\\|_{L^{\\infty}(L^2)} $");
-//        convergence_table.set_tex_caption("Rotat,L2-L2", "$ \\|r - r_h\\|_{L^{\\infty}(L^2)} $");
+           case 3:
+             data_component_interpretation.push_back (DataComponentInterpretation::component_is_part_of_vector);
+             break;
 
-//        convergence_table.evaluate_convergence_rates("# CG", ConvergenceTable::reduction_rate_log2);
-        if(split_flag==0)
-        	convergence_table.evaluate_convergence_rates("# GMRES", ConvergenceTable::reduction_rate_log2);
-        else if (split_flag!=0){
-        	convergence_table.evaluate_convergence_rates("# CG_Elast", ConvergenceTable::reduction_rate_log2);
-        	convergence_table.evaluate_convergence_rates("# CG_Darcy", ConvergenceTable::reduction_rate_log2);
-        }
+           default:
+           Assert(false, ExcNotImplemented());
+             break;
+         }
 
-        convergence_table.evaluate_convergence_rates("Velocity,L8-Hdiv", ConvergenceTable::reduction_rate_log2);
-//        convergence_table.evaluate_convergence_rates("Velocity,L2-Hdiv", ConvergenceTable::reduction_rate_log2);
-//        convergence_table.evaluate_convergence_rates("Pressure,L2-L2", ConvergenceTable::reduction_rate_log2);
-//        convergence_table.evaluate_convergence_rates("Pressure,L2-L2mid", ConvergenceTable::reduction_rate_log2);
-        convergence_table.evaluate_convergence_rates("Pressure,L8-L2", ConvergenceTable::reduction_rate_log2);
+         // Components interpretation of the flow solution (vector - scalar)
+         data_component_interpretation.push_back (DataComponentInterpretation::component_is_part_of_vector);
+         data_component_interpretation.push_back (DataComponentInterpretation::component_is_part_of_vector);
+         data_component_interpretation.push_back(DataComponentInterpretation::component_is_scalar);
 
-//        convergence_table.evaluate_convergence_rates("Stress,L2-L2", ConvergenceTable::reduction_rate_log2);
-//        convergence_table.evaluate_convergence_rates("Stress,L2-Hdiv", ConvergenceTable::reduction_rate_log2);
-        convergence_table.evaluate_convergence_rates("Stress,L8-Hdiv", ConvergenceTable::reduction_rate_log2);
-        convergence_table.evaluate_convergence_rates("Displ,L8-L2", ConvergenceTable::reduction_rate_log2);
-//        convergence_table.evaluate_convergence_rates("Displ,L2-L2mid", ConvergenceTable::reduction_rate_log2);
-//        convergence_table.evaluate_convergence_rates("Rotat,L2-L2", ConvergenceTable::reduction_rate_log2);
+         DataOut<dim> data_out;
+         data_out.attach_dof_handler (dof_handler);
+         data_out.add_data_vector (solution, solution_names,
+                                   DataOut<dim>::type_dof_data,
+                                   data_component_interpretation);
 
-        if (mortar_flag)
-        {
-          convergence_table.set_precision("Lambda,Elast", 3);
-          convergence_table.set_scientific("Lambda,Elast", true);
-          convergence_table.set_tex_caption("Lambda,Elast", "$ \\|u - \\lambda_u_H\\|_{d_H} $");
-          convergence_table.evaluate_convergence_rates("Lambda,Elast", ConvergenceTable::reduction_rate_log2);
+         data_out.build_patches ();
 
-          convergence_table.set_precision("Lambda,Darcy", 3);
-          convergence_table.set_scientific("Lambda,Darcy", true);
-          convergence_table.set_tex_caption("Lambda,Darcy", "$ \\|p - \\lambda_p_H\\|_{d_H} $");
-          convergence_table.evaluate_convergence_rates("Lambda,Darcy", ConvergenceTable::reduction_rate_log2);
 
-          if(split_flag==0){
-        	  convergence_table.set_precision("Lambda,Biot", 3);
-        	  convergence_table.set_scientific("Lambda,Biot", true);
-        	  convergence_table.set_tex_caption("Lambda,Biot", "$ \\|(u,p) - \\lambda_H\\|_{d_H} $");
-        	  convergence_table.evaluate_convergence_rates("Lambda,Biot", ConvergenceTable::reduction_rate_log2);
-          }
-        }
+         int tmp = prm.time/prm.time_step;
+         std::ofstream output ("solution_d" + Utilities::to_string(dim) + "_p"+Utilities::to_string(this_mpi,4)+"-" + std::to_string(tmp)+".vtu");
+         data_out.write_vtu (output);
+         //following lines create a file which paraview can use to link the subdomain results
+               if (this_mpi == 0)
+                 {
+                   std::vector<std::string> filenames;
+                   for (unsigned int i=0;
+                        i<Utilities::MPI::n_mpi_processes(mpi_communicator);
+                        ++i)
+                     filenames.push_back ("solution_d" + Utilities::to_string(dim) + "_p"+Utilities::to_string(i,4)+"-" + std::to_string(tmp)+".vtu");
 
-        std::ofstream error_table_file("error" + std::to_string(Utilities::MPI::n_mpi_processes(mpi_communicator)) + "domains.tex");
+                   std::ofstream master_output (("solution_d" + Utilities::to_string(dim) + "-" + std::to_string(tmp) +
+                                                 ".pvtu").c_str());
+                   data_out.write_pvtu_record (master_output, filenames);
+                 }
 
-        pcout << std::endl;
-        convergence_table.write_text(std::cout);
-        convergence_table.write_tex(error_table_file);
-      }
-    }
+        /* end of commenting out for disabling vtu outputs*/
+
+
+         double total_time = prm.time_step * prm.num_time_steps;
+         if (Utilities::MPI::this_mpi_process(mpi_communicator) == 0 && cycle == refine-1 && std::abs(prm.time-total_time)<1.0e-12){
+   //        convergence_table.set_precision("Velocity,L8-Hdiv", 3);
+           convergence_table.set_precision("Velocity,L2-L2", 3);
+   //        convergence_table.set_precision("Pressure,L2-L2", 3);
+   //        convergence_table.set_precision("Pressure,L2-L2mid", 3);
+           convergence_table.set_precision("Pressure,L8-L2", 3);
+
+   //        convergence_table.set_scientific("Velocity,L8-Hdiv", true);
+           convergence_table.set_scientific("Velocity,L2-L2", true);
+   //        convergence_table.set_scientific("Pressure,L2-L2", true);
+   //        convergence_table.set_scientific("Pressure,L2-L2mid", true);
+           convergence_table.set_scientific("Pressure,L8-L2", true);
+
+   //        convergence_table.set_precision("Stress,L2-L2", 3);
+   //        convergence_table.set_precision("Stress,L2-Hdiv", 3);
+           convergence_table.set_precision("Stress,L8-Hdiv", 3);
+           convergence_table.set_precision("Displ,L8-L2", 3);
+   //        convergence_table.set_precision("Displ,L2-L2mid", 3);
+   //        convergence_table.set_precision("Rotat,L2-L2", 3);
+
+   //        convergence_table.set_scientific("Stress,L2-L2", true);
+   //        convergence_table.set_scientific("Stress,L2-Hdiv", true);
+           convergence_table.set_scientific("Stress,L8-Hdiv", true);
+           convergence_table.set_scientific("Displ,L8-L2", true);
+   //        convergence_table.set_scientific("Displ,L2-L2mid", true);
+   //        convergence_table.set_scientific("Rotat,L2-L2", true);
+
+   //        convergence_table.set_tex_caption("# CG", "\\# cg");
+           if(split_flag==0)
+           	convergence_table.set_tex_caption("# GMRES", "\\# gmres");
+           else if (split_flag!=0){
+           	convergence_table.set_tex_caption("# CG_Elast", "\\# cg_Elast");
+           	convergence_table.set_tex_caption("# CG_Darcy", "\\# cg_Darcy");
+           }
+
+   //        convergence_table.set_tex_caption("Velocity,L8-Hdiv", "$ \\|z - z_h\\|_{L^{\\infty}(H_{div})} $");
+           convergence_table.set_tex_caption("Velocity,L2-L2", "$ \\|\\nabla\\cdot(\\u - \\u_h)\\|_{L^2(L^2)} $");
+   //        convergence_table.set_tex_caption("Pressure,L2-L2", "$ \\|p - p_h\\|_{L^2(L^2)} $");
+   //        convergence_table.set_tex_caption("Pressure,L2-L2mid", "$ \\|Qp - p_h\\|_{L^2(L^2)} $");
+           convergence_table.set_tex_caption("Pressure,L8-L2", "$ \\|p - p_h\\|_{L^{\\infty}(L^2)} $");
+
+   //        convergence_table.set_tex_caption("Stress,L2-L2", "$ \\|\\sigma - \\sigma_h\\|_{L^{\\infty}(L^2)} $");
+   //        convergence_table.set_tex_caption("Stress,L2-Hdiv", "$ \\|\\nabla\\cdot(\\sigma - \\sigma_h)\\|_{L^{\\infty}(L^2)} $");
+           convergence_table.set_tex_caption("Stress,L8-Hdiv", "$ \\|\\sigma - \\sigma_h\\|_{L^{\\infty}(H_{div})} $");
+           convergence_table.set_tex_caption("Displ,L8-L2", "$ \\|u - u_h\\|_{L^{\\infty}(L^2)} $");
+   //        convergence_table.set_tex_caption("Displ,L2-L2mid", "$ \\|Q\\bbeta - \\bbeta_h\\|_{L^{\\infty}(L^2)} $");
+   //        convergence_table.set_tex_caption("Rotat,L2-L2", "$ \\|r - r_h\\|_{L^{\\infty}(L^2)} $");
+
+   //        convergence_table.evaluate_convergence_rates("# CG", ConvergenceTable::reduction_rate_log2);
+           if(split_flag==0)
+           	convergence_table.evaluate_convergence_rates("# GMRES", ConvergenceTable::reduction_rate_log2);
+           else if (split_flag!=0){
+           	convergence_table.evaluate_convergence_rates("# CG_Elast", ConvergenceTable::reduction_rate_log2);
+           	convergence_table.evaluate_convergence_rates("# CG_Darcy", ConvergenceTable::reduction_rate_log2);
+           }
+
+   //        convergence_table.evaluate_convergence_rates("Velocity,L8-Hdiv", ConvergenceTable::reduction_rate_log2);
+           convergence_table.evaluate_convergence_rates("Velocity,L2-L2", ConvergenceTable::reduction_rate_log2);
+   //        convergence_table.evaluate_convergence_rates("Pressure,L2-L2", ConvergenceTable::reduction_rate_log2);
+   //        convergence_table.evaluate_convergence_rates("Pressure,L2-L2mid", ConvergenceTable::reduction_rate_log2);
+           convergence_table.evaluate_convergence_rates("Pressure,L8-L2", ConvergenceTable::reduction_rate_log2);
+
+   //        convergence_table.evaluate_convergence_rates("Stress,L2-L2", ConvergenceTable::reduction_rate_log2);
+   //        convergence_table.evaluate_convergence_rates("Stress,L2-Hdiv", ConvergenceTable::reduction_rate_log2);
+           convergence_table.evaluate_convergence_rates("Stress,L8-Hdiv", ConvergenceTable::reduction_rate_log2);
+           convergence_table.evaluate_convergence_rates("Displ,L8-L2", ConvergenceTable::reduction_rate_log2);
+   //        convergence_table.evaluate_convergence_rates("Displ,L2-L2mid", ConvergenceTable::reduction_rate_log2);
+   //        convergence_table.evaluate_convergence_rates("Rotat,L2-L2", ConvergenceTable::reduction_rate_log2);
+
+           if (mortar_flag)
+           {
+             convergence_table.set_precision("Lambda,Elast", 3);
+             convergence_table.set_scientific("Lambda,Elast", true);
+             convergence_table.set_tex_caption("Lambda,Elast", "$ \\|u - \\lambda_u_H\\|_{d_H} $");
+             convergence_table.evaluate_convergence_rates("Lambda,Elast", ConvergenceTable::reduction_rate_log2);
+
+             convergence_table.set_precision("Lambda,Darcy", 3);
+             convergence_table.set_scientific("Lambda,Darcy", true);
+             convergence_table.set_tex_caption("Lambda,Darcy", "$ \\|p - \\lambda_p_H\\|_{d_H} $");
+             convergence_table.evaluate_convergence_rates("Lambda,Darcy", ConvergenceTable::reduction_rate_log2);
+
+             if(split_flag==0){
+           	  convergence_table.set_precision("Lambda,Biot", 3);
+           	  convergence_table.set_scientific("Lambda,Biot", true);
+           	  convergence_table.set_tex_caption("Lambda,Biot", "$ \\|(u,p) - \\lambda_H\\|_{d_H} $");
+           	  convergence_table.evaluate_convergence_rates("Lambda,Biot", ConvergenceTable::reduction_rate_log2);
+             }
+           }
+
+           std::ofstream error_table_file("error" + std::to_string(Utilities::MPI::n_mpi_processes(mpi_communicator)) + "domains.tex");
+
+           pcout << std::endl;
+           convergence_table.write_text(std::cout);
+           convergence_table.write_tex(error_table_file);
+         }
+       }
 
     template <int dim>
     void MixedBiotProblemDD<dim>::reset_mortars()
