@@ -2985,10 +2985,10 @@ namespace dd_biot
               }
           if(split_order_flag==0){
           pcout << "\r  ..." << cg_iteration
-                << " Elast iterations completed, (Elast relative residual = " << fabs(alpha[0])/normB
+                << " Elast iterations completed, (Elast relative residual = " << sqrt(fabs(alpha[0])/normB)
                 << ")..." << std::flush;
           // Exit criterion
-          if (fabs(alpha[0]) / normB < tolerance )
+          if (sqrt(fabs(alpha[0]) / normB) < tolerance )
 //          if (sqrt(alpha[0]/normB<1.e-8) )
             {
               pcout << "\n  Elast CG converges in " << cg_iteration << " iterations!\n";
@@ -2999,10 +2999,10 @@ namespace dd_biot
           }
           else if(split_order_flag==1){
                    pcout << "\r  ..." << cg_iteration
-                         << " Darcy iterations completed, (Darcy relative residual = " << fabs(alpha[0])/normB
+                         << " Darcy iterations completed, (Darcy relative residual = " << sqrt(fabs(alpha[0])/normB)
                          << ")..." << std::flush;
                    // Exit criterion
-                   if (fabs(alpha[0]) / normB < tolerance )
+                   if (sqrt(fabs(alpha[0]) / normB) < tolerance )
 //        	  if (sqrt(alpha[0]/normB<1.e-8) )
                      {
                        pcout << "\n  Darcy CG converges in " << cg_iteration << " iterations!\n";
