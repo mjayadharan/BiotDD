@@ -33,7 +33,7 @@ int main (int argc, char *argv[])
         int num_cycle=5;
         int max_itr=1000;
         double tolerence = 1.e-6;
-        BiotParameters bparam (0.001,1,c0,alpha);
+        BiotParameters bparam (0.001,100,c0,alpha);
 
 //        //BiotDD without mortar
 //        MixedBiotProblemDD<2> drained_split(1, bparam,0,0,1);
