@@ -1905,7 +1905,7 @@ namespace dd_biot
     void MixedBiotProblemDD<dim>::compute_multiscale_basis ()
     {
         TimerOutput::Scope t(computing_timer, "Compute multiscale basis");
-        ConstraintMatrix constraints;
+        dealii::AffineConstraints<double>  constraints;
         QGauss<dim-1> quad(qdegree);
         FEFaceValues<dim> fe_face_values (fe, quad,
                                           update_values    | update_normal_vectors |
@@ -2083,7 +2083,7 @@ namespace dd_biot
           quad = QGauss<dim - 1>(qdegree);
 
 
-          ConstraintMatrix  constraints;
+          dealii::AffineConstraints<double>   constraints;
           constraints.clear();
           constraints.close();
           FEFaceValues<dim> fe_face_values(fe,
@@ -2753,7 +2753,7 @@ namespace dd_biot
       quad = QGauss<dim - 1>(qdegree);
 
 
-      ConstraintMatrix  constraints;
+      dealii::AffineConstraints<double>   constraints;
       constraints.clear();
       constraints.close();
       FEFaceValues<dim> fe_face_values(fe,
@@ -3195,7 +3195,7 @@ namespace dd_biot
         solve_star();
 
         // Project the solution to the mortar space
-        ConstraintMatrix constraints;
+        dealii::AffineConstraints<double>  constraints;
         constraints.clear();
         constraints.close();
         project_mortar(P_fine2coarse, dof_handler, solution_star, project_quad, constraints, neighbors, dof_handler_mortar, solution_star_mortar);
@@ -3927,7 +3927,7 @@ namespace dd_biot
             {
               InitialCondition<dim> ic;
 
-              ConstraintMatrix constraints;
+              dealii::AffineConstraints<double>  constraints;
               constraints.close();
               VectorTools::project (dof_handler,
                                     constraints,

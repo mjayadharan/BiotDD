@@ -10,7 +10,7 @@
 #define ELASTICITY_MFEDD_UTILITIES_H
 
 #include "projector.h"
-
+#include <map>
 namespace dd_biot
 {
     using namespace dealii;
@@ -404,7 +404,7 @@ namespace dd_biot
                     const DoFHandler<dim>     &dof1,
                     BlockVector<double>       &in_vec,
                     const Quadrature<dim-1>   &quad,
-                    ConstraintMatrix          &constraints,
+					dealii::AffineConstraints<double>           &constraints,
                     const std::vector<int>    &neighbors,
                     const DoFHandler<dim>     &dof2,
                     BlockVector<double>       &out_vec)
@@ -414,7 +414,7 @@ namespace dd_biot
         Functions::FEFieldFunction<dim, DoFHandler<dim>, BlockVector<double>> fe_interface_data (dof1, in_vec);
         std::map<types::global_dof_index,double> boundary_values_velocity;
 
-        typename FunctionMap<dim>::type boundary_functions_velocity;
+        std::map<types::boundary_id, const Function<dim, double> *> boundary_functions_velocity;
 
         constraints.clear ();
 
