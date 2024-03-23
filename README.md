@@ -4,7 +4,9 @@ Fluid flow simulator based on Biot system of poroelasticity, using Mixed Finite 
 ![ezgif com-gif-maker (3)](https://user-images.githubusercontent.com/35903705/97790134-68adc980-1b9c-11eb-9431-ec5bfcc6da36.gif) 
 
   
-__Related publication__: M. Jayadharan, E. Khattatov, I. Yotov, Domain decomposition and partitioning methods for mixed finite element discretization of the Biot system of poroelasticity, [arxiv math.NA, 2010.15353](https://arxiv.org/abs/2010.15353).
+__Note__: If you use the code for research or development, please cite the following original publications: [Domain decomposition and partitioning methods for mixed finite element discretizations of the Biot system of poroelasticity M Jayadharan, E Khattatov, I Yotov Computational Geosciences 25, 1919-1938]([https://epubs.siam.org/doi/abs/10.1137/21M1447945](https://link.springer.com/article/10.1007/s10596-021-10091-w))
+and
+[Multiscale mortar mixed finite element methods for the Biot system of poroelasticity M Jayadharan, I Yotov arXiv preprint arXiv:2211.02949](https://arxiv.org/abs/2211.02949)
 
 __Limited user manual. Please visit the similar [space-time DD project](https://github.com/mjayadharan/MMMFE-ST-DD) to see a detailed documentaion on how to install and run the simulator.__  
 Code developed to simulate time-dependent diffusion problem using Multiscale Mortar Mixed Finite Elements(MMMFE). Model can be easily adapted to simulate other fluid flow models based on linear PDEs. Sub-domain solves are done in parallel across different processors using MPI. Computed solutions are outputted and visualized on a global space-time grid in the .vtk and .vtu formats. 
