@@ -4,7 +4,7 @@ Fluid flow simulator based on Biot system of poroelasticity, using Mixed Finite 
 ![ezgif com-gif-maker (3)](https://user-images.githubusercontent.com/35903705/97790134-68adc980-1b9c-11eb-9431-ec5bfcc6da36.gif) 
 
   
-__Note__: If you use the code for research or development, please cite the following original publications: [Domain decomposition and partitioning methods for mixed finite element discretizations of the Biot system of poroelasticity M Jayadharan, E Khattatov, I Yotov Computational Geosciences 25, 1919-1938]([https://epubs.siam.org/doi/abs/10.1137/21M1447945](https://link.springer.com/article/10.1007/s10596-021-10091-w))
+__Note__: If you use the code for research or development, please cite the following original publications: [Domain decomposition and partitioning methods for mixed finite element discretizations of the Biot system of poroelasticity M Jayadharan, E Khattatov, I Yotov Computational Geosciences 25, 1919-1938](https://link.springer.com/article/10.1007/s10596-021-10091-w)
 and
 [Multiscale mortar mixed finite element methods for the Biot system of poroelasticity M Jayadharan, I Yotov arXiv preprint arXiv:2211.02949](https://arxiv.org/abs/2211.02949)
 
