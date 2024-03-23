@@ -26,7 +26,7 @@ email: [manu.jayadharan@gmail.com](mailto:manu.jayadharan@gmail.com), [manu.jaya
 Eldar Khattatov, Department of Mathematics at University of Pittsburgh, 2018  
 
 
-## deal.ii 9.1 requirement (latest at the time)
+## deal.ii 9.5.2 requirement (latest at the time)
 ---------------------------------------
 Need deal.ii configured with mpi  to compile and run the simulations. Latest version of dealii can be found at : [https://www.dealii.org/download.html](https://www.dealii.org/download.html)
 
